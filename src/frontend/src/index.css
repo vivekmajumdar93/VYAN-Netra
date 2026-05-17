@@ -1,0 +1,172 @@
+/* ── VYAN AI Void Font Faces ────────────────────────────────────── */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/assets/fonts/SpaceGrotesk-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/assets/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: "Space Grotesk", sans-serif;
+    --font-body: "General Sans", sans-serif;
+    --font-mono: "Geist Mono", monospace;
+    --radius: 0.5rem;
+
+    --background: 0.06 0.003 270;
+    --foreground: 0.96 0.01 280;
+    --card: 0.1 0.005 270;
+    --card-foreground: 0.96 0.01 280;
+    --popover: 0.12 0.006 270;
+    --popover-foreground: 0.96 0.01 280;
+
+    --primary: 0.78 0.04 280;
+    --primary-foreground: 0.06 0.003 270;
+
+    --secondary: 0.15 0.03 265;
+    --secondary-foreground: 0.85 0.02 280;
+    --muted: 0.13 0.01 270;
+    --muted-foreground: 0.52 0.01 275;
+
+    --accent: 0.62 0.18 268;
+    --accent-foreground: 0.98 0 0;
+
+    --destructive: 0.58 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.2 0.01 270;
+    --input: 0.18 0.01 270;
+    --ring: 0.62 0.18 268;
+
+    --chart-1: 0.62 0.18 268;
+    --chart-2: 0.55 0.2 295;
+    --chart-3: 0.7 0.16 205;
+    --chart-4: 0.65 0.22 25;
+    --chart-5: 0.75 0.14 160;
+
+    --sidebar: 0.08 0.004 270;
+    --sidebar-foreground: 0.96 0.01 280;
+    --sidebar-primary: 0.62 0.18 268;
+    --sidebar-primary-foreground: 0.98 0 0;
+    --sidebar-accent: 0.12 0.01 270;
+    --sidebar-accent-foreground: 0.85 0.02 280;
+    --sidebar-border: 0.18 0.005 270;
+    --sidebar-ring: 0.62 0.18 268;
+
+    --void-black: #000000;
+    --gradient-start: #0b2e5c;
+    --gradient-end: #4a1a6b;
+    --cosmic-silver: #e8e8ff;
+    --electric-blue: #5b9dff;
+    --deep-violet: #9359ff;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(91, 157, 255, 0.2);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(91, 157, 255, 0.4);
+  }
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Glass morphism */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(5, 10, 25, 0.1);
+    border: 1px solid rgba(91, 157, 255, 0.12);
+  }
+  .glass-elevated {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(10, 18, 40, 0.2);
+    border: 1px solid rgba(91, 157, 255, 0.2);
+    box-shadow: 0 0 40px rgba(91, 157, 255, 0.06), inset 0 1px 1px
+      rgba(255, 255, 255, 0.04);
+  }
+  .glass-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(8, 14, 32, 0.65);
+    border: 1px solid rgba(91, 157, 255, 0.15);
+  }
+
+  /* Glow effects */
+  .glow-blue {
+    box-shadow: 0 0 16px rgba(91, 157, 255, 0.35), 0 0 40px
+      rgba(91, 157, 255, 0.15);
+  }
+  .glow-violet {
+    box-shadow: 0 0 16px rgba(147, 89, 255, 0.35), 0 0 40px
+      rgba(147, 89, 255, 0.15);
+  }
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(91, 157, 255, 0.4), 0 0 60px
+      rgba(147, 89, 255, 0.2);
+  }
+
+  /* Text glow */
+  .text-glow-blue {
+    text-shadow: 0 0 12px rgba(91, 157, 255, 0.7);
+  }
+  .text-glow-silver {
+    text-shadow: 0 0 10px rgba(232, 232, 255, 0.5);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #5b9dff 0%, #9359ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Metric value display */
+  .metric-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}

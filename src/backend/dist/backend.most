@@ -1,0 +1,238 @@
+// Version: 1.0.0
+type ActivityEventType__203382045 = {#action; #login; #permissionChange};
+type Alert__148163024 =
+  {
+    id : Id__389469852;
+    metricType : Text;
+    productId : Nat;
+    var resolved : Bool;
+    var resolvedAt : ?Timestamp__301639476;
+    severity : MetricSeverity__185018019;
+    threshold : Nat;
+    timestamp : Timestamp__301639476;
+    value : Nat
+  };
+type EmailConfigId__402419683 = Id__389469852;
+type EmailConfig__447292888 =
+  {
+    bounceEmail : Text;
+    createdAt : Timestamp__301639476;
+    id : EmailConfigId__402419683;
+    var isActive : Bool;
+    productId : Nat;
+    senderEmail : Text;
+    senderName : Text
+  };
+type EmailLog__640524355 =
+  {
+    id : Id__389469852;
+    productId : Nat;
+    recipient : Text;
+    status : EmailStatus__216366258;
+    subject : Text;
+    timestamp : Timestamp__301639476
+  };
+type EmailStatus__216366258 = {#bounced; #failed; #sent};
+type EmailTemplate__183211815 =
+  {
+    var body : Text;
+    id : Id__389469852;
+    var lastModified : Timestamp__301639476;
+    name : Text;
+    productId : Nat;
+    subject : Text
+  };
+type Id__389469852 = Nat;
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type IssueComment__754548836 =
+  {
+    authorId : Nat;
+    content : Text;
+    id : Id__389469852;
+    issueId : IssueId__638596491;
+    timestamp : Timestamp__301639476
+  };
+type IssueId__638596491 = Id__389469852;
+type IssueSeverity__189948930 = {#critical; #high; #low; #medium};
+type IssueStatus__118226348 = {#in_progress; #open; #resolved};
+type Issue__151947889 =
+  {
+    var assignedTo : ?Nat;
+    createdAt : Timestamp__301639476;
+    description : Text;
+    id : IssueId__638596491;
+    productId : Nat;
+    severity : IssueSeverity__189948930;
+    var status : IssueStatus__118226348;
+    title : Text;
+    var updatedAt : Timestamp__301639476
+  };
+type MetricSeverity__185018019 = {#critical; #info; #warning};
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type NotificationSeverity__25178115 = {#critical; #info; #warning};
+type NotificationType__908192046 = {#issue; #systemAlert; #update; #user};
+type Notification__264708741 =
+  {
+    body : Text;
+    createdAt : Timestamp__301639476;
+    id : Id__389469852;
+    var isRead : Bool;
+    notifType : NotificationType__908192046;
+    productId : ?Nat;
+    severity : NotificationSeverity__25178115;
+    var snoozed : Bool;
+    var snoozedUntil : ?Timestamp__301639476;
+    title : Text
+  };
+type ProductId__442338476 = Id__389469852;
+type ProductStatus__655178360 = {#connected; #disconnected};
+type Product__750902660 =
+  {
+    code : Text;
+    description : Text;
+    id : ProductId__442338476;
+    var lastSync : Timestamp__301639476;
+    name : Text;
+    registeredAt : Timestamp__301639476;
+    var status : ProductStatus__655178360
+  };
+type SystemMetrics__894799810 =
+  {
+    apiLatency : Nat;
+    connectionStatus : Text;
+    cpu : Nat;
+    disk : Nat;
+    id : Id__389469852;
+    memory : Nat;
+    networkUptime : Nat;
+    productId : Nat;
+    timestamp : Timestamp__301639476
+  };
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type Timestamp__301639476 = Time__900049286;
+type UpdateId__936527823 = Id__389469852;
+type UpdateStatus__815900895 = {#deployed; #failed; #pending; #scheduled};
+type Update__56983511 =
+  {
+    createdAt : Timestamp__301639476;
+    var deployedAt : ?Timestamp__301639476;
+    id : UpdateId__936527823;
+    productId : Nat;
+    releaseNotes : Text;
+    scheduledAt : ?Timestamp__301639476;
+    size : Nat;
+    var status : UpdateStatus__815900895;
+    version : Text
+  };
+type UserActivity__862856431 =
+  {
+    description : Text;
+    eventType : ActivityEventType__203382045;
+    id : Id__389469852;
+    productId : Nat;
+    timestamp : Timestamp__301639476;
+    userId : UserId__1043627770
+  };
+type UserId__1043627770 = Id__389469852;
+type UserRole__41952412 = {#admin; #manager; #viewer};
+type UserStatus__357598751 = {#active; #suspended};
+type User__98118558 =
+  {
+    createdAt : Timestamp__301639476;
+    email : Text;
+    id : UserId__1043627770;
+    var lastActivity : Timestamp__301639476;
+    name : Text;
+    productId : Nat;
+    var role : UserRole__41952412;
+    var status : UserStatus__357598751
+  };
+actor {
+  stable activities :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?UserActivity__862856431]];
+      var elementIndex : Nat__490723111
+    };
+  stable activityState : {var nextId : Nat};
+  stable alerts :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Alert__148163024]];
+      var elementIndex : Nat__490723111
+    };
+  stable alertsState : {var nextId : Nat};
+  stable commentState : {var nextId : Nat};
+  stable comments :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?IssueComment__754548836]];
+      var elementIndex : Nat__490723111
+    };
+  stable emailConfigState : {var nextId : Nat};
+  stable emailConfigs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?EmailConfig__447292888]];
+      var elementIndex : Nat__490723111
+    };
+  stable emailLogState : {var nextId : Nat};
+  stable emailLogs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?EmailLog__640524355]];
+      var elementIndex : Nat__490723111
+    };
+  stable emailTemplateState : {var nextId : Nat};
+  stable emailTemplates :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?EmailTemplate__183211815]];
+      var elementIndex : Nat__490723111
+    };
+  stable issueState : {var nextId : Nat};
+  stable issues :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Issue__151947889]];
+      var elementIndex : Nat__490723111
+    };
+  stable metrics :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?SystemMetrics__894799810]];
+      var elementIndex : Nat__490723111
+    };
+  stable metricsState : {var nextId : Nat};
+  stable notifState : {var nextId : Nat};
+  stable notifications :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Notification__264708741]];
+      var elementIndex : Nat__490723111
+    };
+  stable productState : {var nextId : Nat};
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__750902660]];
+      var elementIndex : Nat__490723111
+    };
+  stable updateState : {var nextId : Nat};
+  stable updates :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Update__56983511]];
+      var elementIndex : Nat__490723111
+    };
+  stable userState : {var nextId : Nat};
+  stable users :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?User__98118558]];
+      var elementIndex : Nat__490723111
+    }
+};
