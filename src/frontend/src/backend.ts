@@ -141,6 +141,14 @@ export interface NotificationView {
     severity: NotificationSeverity;
     snoozed: boolean;
 }
+export interface LinkedAppView {
+    id: LinkedAppId;
+    status: string;
+    baseUrl: string;
+    appCode: string;
+    name: string;
+    addedAt: Timestamp;
+}
 export interface EmailTemplateView {
     id: Id;
     subject: string;
@@ -181,6 +189,7 @@ export interface SystemMetrics {
     networkUptime: bigint;
     apiLatency: bigint;
 }
+export type LinkedAppId = string;
 export type UserId = bigint;
 export interface ProductView {
     id: ProductId;
@@ -288,6 +297,7 @@ export interface backendInterface {
     listEmailTemplates(productId: bigint): Promise<Array<EmailTemplateView>>;
     listIssueComments(issueId: bigint): Promise<Array<IssueComment>>;
     listIssues(productId: bigint | null, status: IssueStatus | null, severity: IssueSeverity | null): Promise<Array<IssueView>>;
+    listLinkedApps(): Promise<Array<LinkedAppView>>;
     listNotifications(notifType: NotificationType | null, productId: bigint | null, isRead: boolean | null): Promise<Array<NotificationView>>;
     listProductUpdates(productId: bigint): Promise<Array<UpdateView>>;
     listProducts(): Promise<Array<ProductView>>;
@@ -299,7 +309,9 @@ export interface backendInterface {
     markNotificationRead(id: bigint): Promise<void>;
     markUpdateDeployed(id: bigint): Promise<void>;
     reconnectProduct(id: bigint): Promise<void>;
+    registerLinkedApp(name: string, baseUrl: string, appCode: string): Promise<LinkedAppView>;
     registerProduct(name: string, description: string, code: string): Promise<ProductView>;
+    removeLinkedApp(id: string): Promise<boolean>;
     removeUser(id: bigint): Promise<void>;
     resolveAlert(id: bigint): Promise<void>;
     resolveIssue(id: bigint): Promise<void>;
@@ -312,10 +324,11 @@ export interface backendInterface {
     updateEmailConfig(id: bigint, senderName: string, senderEmail: string, bounceEmail: string, isActive: boolean): Promise<void>;
     updateEmailTemplate(id: bigint, subject: string, body: string): Promise<void>;
     updateIssue(id: bigint, title: string, description: string, severity: IssueSeverity, status: IssueStatus, assignedTo: bigint | null): Promise<void>;
+    updateLinkedAppStatus(id: string, status: string): Promise<LinkedAppView | null>;
     updateProductMeta(id: bigint, name: string, description: string): Promise<void>;
     updateUserRole(id: bigint, role: UserRole): Promise<void>;
 }
-import type { ActivityEventType as _ActivityEventType, AlertView as _AlertView, EmailLog as _EmailLog, EmailStatus as _EmailStatus, Id as _Id, IssueId as _IssueId, IssueSeverity as _IssueSeverity, IssueStatus as _IssueStatus, IssueView as _IssueView, MetricSeverity as _MetricSeverity, NotificationSeverity as _NotificationSeverity, NotificationType as _NotificationType, NotificationView as _NotificationView, ProductId as _ProductId, ProductStatus as _ProductStatus, ProductView as _ProductView, SystemMetrics as _SystemMetrics, Timestamp as _Timestamp, UpdateId as _UpdateId, UpdateStatus as _UpdateStatus, UpdateView as _UpdateView, UserActivity as _UserActivity, UserId as _UserId, UserRole as _UserRole, UserStatus as _UserStatus, UserView as _UserView } from "./declarations/backend.did.d.ts";
+import type { ActivityEventType as _ActivityEventType, AlertView as _AlertView, EmailLog as _EmailLog, EmailStatus as _EmailStatus, Id as _Id, IssueId as _IssueId, IssueSeverity as _IssueSeverity, IssueStatus as _IssueStatus, IssueView as _IssueView, LinkedAppView as _LinkedAppView, MetricSeverity as _MetricSeverity, NotificationSeverity as _NotificationSeverity, NotificationType as _NotificationType, NotificationView as _NotificationView, ProductId as _ProductId, ProductStatus as _ProductStatus, ProductView as _ProductView, SystemMetrics as _SystemMetrics, Timestamp as _Timestamp, UpdateId as _UpdateId, UpdateStatus as _UpdateStatus, UpdateView as _UpdateView, UserActivity as _UserActivity, UserId as _UserId, UserRole as _UserRole, UserStatus as _UserStatus, UserView as _UserView } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async addEmailLog(arg0: bigint, arg1: string, arg2: string, arg3: EmailStatus): Promise<EmailLog> {
@@ -654,6 +667,20 @@ export class Backend implements backendInterface {
             return from_candid_vec_n57(this._uploadFile, this._downloadFile, result);
         }
     }
+    async listLinkedApps(): Promise<Array<LinkedAppView>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listLinkedApps();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listLinkedApps();
+            return result;
+        }
+    }
     async listNotifications(arg0: NotificationType | null, arg1: bigint | null, arg2: boolean | null): Promise<Array<NotificationView>> {
         if (this.processError) {
             try {
@@ -808,6 +835,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async registerLinkedApp(arg0: string, arg1: string, arg2: string): Promise<LinkedAppView> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerLinkedApp(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerLinkedApp(arg0, arg1, arg2);
+            return result;
+        }
+    }
     async registerProduct(arg0: string, arg1: string, arg2: string): Promise<ProductView> {
         if (this.processError) {
             try {
@@ -820,6 +861,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.registerProduct(arg0, arg1, arg2);
             return from_candid_ProductView_n46(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async removeLinkedApp(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeLinkedApp(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeLinkedApp(arg0);
+            return result;
         }
     }
     async removeUser(arg0: bigint): Promise<void> {
@@ -990,6 +1045,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async updateLinkedAppStatus(arg0: string, arg1: string): Promise<LinkedAppView | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateLinkedAppStatus(arg0, arg1);
+                return from_candid_opt_n70(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateLinkedAppStatus(arg0, arg1);
+            return from_candid_opt_n70(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async updateProductMeta(arg0: bigint, arg1: string, arg2: string): Promise<void> {
         if (this.processError) {
             try {
@@ -1087,6 +1156,9 @@ function from_candid_opt_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
 }
 function from_candid_opt_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ProductView]): ProductView | null {
     return value.length === 0 ? null : from_candid_ProductView_n46(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n70(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_LinkedAppView]): LinkedAppView | null {
+    return value.length === 0 ? null : value[0];
 }
 function from_candid_record_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: _Id;

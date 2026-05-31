@@ -1,6 +1,4 @@
 import { Toaster } from "@/components/ui/sonner";
-import LoginPage from "@/pages/LoginPage";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 
@@ -10,41 +8,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+// VYAN Security: direct admin access — Firebase auth will be linked later.
 export default function Layout({ title, subtitle, children }: LayoutProps) {
-  const { loginStatus, identity } = useInternetIdentity();
-  const isAuthenticated = loginStatus === "success" && !!identity;
-  const isLoading =
-    loginStatus === "initializing" || loginStatus === "logging-in";
-
-  if (isLoading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#000" }}
-      >
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 opacity-70 animate-pulse-glow" />
-            <div className="absolute inset-2 rounded-full bg-black" />
-            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 animate-pulse" />
-          </div>
-          <div className="text-center">
-            <p className="font-display text-lg font-semibold text-[#E8E8FF]">
-              VYAN Netra
-            </p>
-            <p className="text-xs font-mono text-[rgba(232,232,255,0.4)] mt-1 animate-pulse">
-              Initializing command nexus…
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
   return (
     <div
       className="flex h-screen overflow-hidden"

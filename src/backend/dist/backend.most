@@ -68,6 +68,16 @@ type Issue__151947889 =
     title : Text;
     var updatedAt : Timestamp__301639476
   };
+type LinkedAppId__84629049 = Text;
+type LinkedApp__551911294 =
+  {
+    addedAt : Timestamp__301639476;
+    appCode : Text;
+    baseUrl : Text;
+    id : LinkedAppId__84629049;
+    name : Text;
+    var status : Text
+  };
 type MetricSeverity__185018019 = {#critical; #info; #warning};
 type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
@@ -198,6 +208,13 @@ actor {
     {
       var blockIndex : Nat__490723111;
       var blocks : [var [var ?Issue__151947889]];
+      var elementIndex : Nat__490723111
+    };
+  stable linkedAppState : {var nextId : Nat};
+  stable linkedApps :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?LinkedApp__551911294]];
       var elementIndex : Nat__490723111
     };
   stable metrics :

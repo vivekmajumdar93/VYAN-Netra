@@ -13,8 +13,14 @@ import NotifsMixin "mixins/notifications-api";
 import IssuesMixin "mixins/issues-api";
 import UpdatesMixin "mixins/updates-api";
 import EmailMixin "mixins/email-api";
+import LinkedAppTypes "types/linked-apps";
+import LinkedAppsMixin "mixins/linked-apps-api";
 
 actor {
+  // Linked Apps
+  let linkedApps = List.empty<LinkedAppTypes.LinkedApp>();
+  let linkedAppState = { var nextId : Nat = 0 };
+
   // Products
   let products = List.empty<ProductTypes.Product>();
   let productState = { var nextId : Nat = 0 };
@@ -60,5 +66,6 @@ actor {
   include IssuesMixin(issues, comments, issueState, commentState);
   include UpdatesMixin(updates, updateState);
   include EmailMixin(emailConfigs, emailLogs, emailTemplates, emailConfigState, emailLogState, emailTemplateState);
+  include LinkedAppsMixin(linkedApps, linkedAppState);
 };
 

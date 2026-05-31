@@ -112,6 +112,16 @@ type MetricSeverity =
    info;
    warning;
  };
+type LinkedAppView = 
+ record {
+   addedAt: Timestamp;
+   appCode: text;
+   baseUrl: text;
+   id: LinkedAppId;
+   name: text;
+   status: text;
+ };
+type LinkedAppId = text;
 type IssueView = 
  record {
    assignedTo: opt nat;
@@ -236,6 +246,7 @@ service : {
   listIssueComments: (issueId: nat) -> (vec IssueComment) query;
   listIssues: (productId: opt nat, status: opt IssueStatus, severity:
    opt IssueSeverity) -> (vec IssueView) query;
+  listLinkedApps: () -> (vec LinkedAppView) query;
   listNotifications: (notifType: opt NotificationType, productId: opt nat,
    isRead: opt bool) -> (vec NotificationView) query;
   listProductUpdates: (productId: nat) -> (vec UpdateView) query;
@@ -249,8 +260,11 @@ service : {
   markNotificationRead: (id: nat) -> ();
   markUpdateDeployed: (id: nat) -> ();
   reconnectProduct: (id: nat) -> ();
+  registerLinkedApp: (name: text, baseUrl: text, appCode: text) ->
+   (LinkedAppView);
   registerProduct: (name: text, description: text, code: text) ->
    (ProductView);
+  removeLinkedApp: (id: text) -> (bool);
   removeUser: (id: nat) -> ();
   resolveAlert: (id: nat) -> ();
   resolveIssue: (id: nat) -> ();
@@ -267,6 +281,7 @@ service : {
   updateEmailTemplate: (id: nat, subject: text, body: text) -> ();
   updateIssue: (id: nat, title: text, description: text, severity:
    IssueSeverity, status: IssueStatus, assignedTo: opt nat) -> ();
+  updateLinkedAppStatus: (id: text, status: text) -> (opt LinkedAppView);
   updateProductMeta: (id: nat, name: text, description: text) -> ();
   updateUserRole: (id: nat, role: UserRole) -> ();
 }

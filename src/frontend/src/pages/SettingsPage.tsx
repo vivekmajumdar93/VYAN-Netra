@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
+import { useVyanAuth } from "@/hooks/use-vyan-auth";
 import {
   Activity,
   AtSign,
+  ExternalLink,
   Info,
+  Link2,
   LogOut,
   Palette,
   Shield,
@@ -121,10 +123,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { clear, identity } = useInternetIdentity();
+  const { currentUser, logout: vyanLogout } = useVyanAuth();
 
-  // Principal
-  const principalId = identity?.getPrincipal().toText() ?? "Not connected";
+  // VYAN Auth identity display
+  const adminEmail = currentUser?.email ?? "Not connected";
 
   // ── LocalStorage-backed settings
   const [autoRefresh, setAutoRefresh] = useState(() =>
@@ -146,7 +148,7 @@ export default function SettingsPage() {
   }
 
   function handleSignOut() {
-    clear();
+    vyanLogout();
     toast.success("Signed out from VYAN Netra");
   }
 
@@ -176,8 +178,8 @@ export default function SettingsPage() {
           index={0}
         >
           <SettingRow
-            label="Internet Identity"
-            description="Your decentralized identity on the Internet Computer"
+            label="VYAN Identity"
+            description="Your VYAN Security admin identity for this console"
           >
             <Button
               variant="destructive"
@@ -190,10 +192,10 @@ export default function SettingsPage() {
             </Button>
           </SettingRow>
 
-          {/* Principal ID full display */}
+          {/* VYAN Identity email display */}
           <div className="pb-4">
             <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] uppercase tracking-widest mb-2">
-              Principal ID
+              Admin Email
             </p>
             <div
               className="rounded-lg px-3 py-2.5 flex items-start gap-2"
@@ -207,7 +209,7 @@ export default function SettingsPage() {
                 className="text-xs font-mono text-[#E8E8FF] break-all select-all leading-relaxed"
                 data-ocid="settings.principal.display"
               >
-                {principalId}
+                {adminEmail}
               </p>
             </div>
           </div>
@@ -222,7 +224,7 @@ export default function SettingsPage() {
         >
           <SettingRow
             label="Auto-Refresh Metrics"
-            description="Automatically poll for new system metrics every 30 s. Disabling this reduces background requests."
+            description="Automatically poll for new system metrics every 30 s. Disabling this reduces background requests."
           >
             <Switch
               checked={autoRefresh}
@@ -281,12 +283,82 @@ export default function SettingsPage() {
           </SettingRow>
         </Section>
 
+        {/* ── Security ── */}
+        <Section
+          icon={<Shield className="w-3.5 h-3.5" />}
+          title="VYAN Security"
+          ocid="settings.security.section"
+          index={3}
+        >
+          <div className="py-3">
+            <div
+              className="rounded-xl p-4 flex items-center gap-3"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(11,46,92,0.4), rgba(74,26,107,0.3))",
+                border: "1px solid rgba(91,157,255,0.15)",
+              }}
+            >
+              <Shield className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-mono text-[rgba(232,232,255,0.7)]">
+                  VYAN Security · Direct Admin Access
+                </p>
+                <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mt-0.5">
+                  {/* Firebase integration will be linked here by VYAN Labs */}
+                  Firebase auth integration pending — open access mode active
+                </p>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* ── Linked Applications ── */}
+        <Section
+          icon={<Link2 className="w-3.5 h-3.5" />}
+          title="Linked Applications"
+          ocid="settings.linked_apps.section"
+          index={4}
+        >
+          <div className="py-3">
+            <div
+              className="rounded-xl p-4 flex items-center justify-between gap-4"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(11,46,92,0.4), rgba(74,26,107,0.3))",
+                border: "1px solid rgba(91,157,255,0.15)",
+              }}
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-mono text-[rgba(232,232,255,0.7)]">
+                  Connect VYAN ecosystem apps via 6-digit App Code
+                </p>
+                <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mt-0.5">
+                  Register, monitor and route admin queries to linked apps
+                </p>
+              </div>
+              <a
+                href="/linked-apps"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-[rgba(91,157,255,0.12)]"
+                style={{
+                  background: "rgba(91,157,255,0.08)",
+                  border: "1px solid rgba(91,157,255,0.25)",
+                  color: "rgba(91,157,255,0.9)",
+                }}
+                data-ocid="settings.linked_apps.link"
+              >
+                <ExternalLink className="w-3 h-3" /> Manage
+              </a>
+            </div>
+          </div>
+        </Section>
+
         {/* ── About ── */}
         <Section
           icon={<Info className="w-3.5 h-3.5" />}
           title="About"
           ocid="settings.about.section"
-          index={3}
+          index={5}
         >
           <div className="py-1">
             {/* VYAN Netra brand block */}
@@ -333,7 +405,7 @@ export default function SettingsPage() {
               <InfoRow label="Company" value="VYAN Labs" />
               <InfoRow label="Ecosystem" value="VYAN Ecosystem" />
               <InfoRow label="Version" value="v1.0.0" />
-              <InfoRow label="Platform" value="Internet Computer" />
+              <InfoRow label="Security" value="VYAN Security" />
             </div>
 
             <p className="text-[10px] font-mono text-[rgba(232,232,255,0.2)] text-center mt-4 pb-3">

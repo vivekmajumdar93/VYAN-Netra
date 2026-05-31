@@ -18,6 +18,7 @@ const IssuesPage = lazy(() => import("@/pages/IssuesPage"));
 const UpdatesPage = lazy(() => import("@/pages/UpdatesPage"));
 const EmailPage = lazy(() => import("@/pages/EmailPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const LinkedAppsPage = lazy(() => import("@/pages/LinkedAppsPage"));
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Dashboard", subtitle: "VYAN Netra Command Center" },
@@ -41,6 +42,10 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   },
   "/email": { title: "Email", subtitle: "Email configs, templates & logs" },
   "/settings": { title: "Settings", subtitle: "Console configuration" },
+  "/linked-apps": {
+    title: "Linked Applications",
+    subtitle: "Connect & manage VYAN ecosystem apps",
+  },
 };
 
 function AppShell() {
@@ -108,6 +113,11 @@ const settingsRoute = createRoute({
   path: "/settings",
   component: SettingsPage,
 });
+const linkedAppsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/linked-apps",
+  component: LinkedAppsPage,
+});
 
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
@@ -119,6 +129,7 @@ const routeTree = rootRoute.addChildren([
   updatesRoute,
   emailRoute,
   settingsRoute,
+  linkedAppsRoute,
 ]);
 
 const router = createRouter({ routeTree });

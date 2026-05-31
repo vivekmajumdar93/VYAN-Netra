@@ -173,6 +173,15 @@ export const ProductView = IDL.Record({
   'registeredAt' : Timestamp,
   'lastSync' : Timestamp,
 });
+export const LinkedAppId = IDL.Text;
+export const LinkedAppView = IDL.Record({
+  'id' : LinkedAppId,
+  'status' : IDL.Text,
+  'baseUrl' : IDL.Text,
+  'appCode' : IDL.Text,
+  'name' : IDL.Text,
+  'addedAt' : Timestamp,
+});
 export const ActivityEventType = IDL.Variant({
   'action' : IDL.Null,
   'login' : IDL.Null,
@@ -271,6 +280,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IssueView)],
       ['query'],
     ),
+  'listLinkedApps' : IDL.Func([], [IDL.Vec(LinkedAppView)], ['query']),
   'listNotifications' : IDL.Func(
       [IDL.Opt(NotificationType), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Bool)],
       [IDL.Vec(NotificationView)],
@@ -294,11 +304,17 @@ export const idlService = IDL.Service({
   'markNotificationRead' : IDL.Func([IDL.Nat], [], []),
   'markUpdateDeployed' : IDL.Func([IDL.Nat], [], []),
   'reconnectProduct' : IDL.Func([IDL.Nat], [], []),
+  'registerLinkedApp' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [LinkedAppView],
+      [],
+    ),
   'registerProduct' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text],
       [ProductView],
       [],
     ),
+  'removeLinkedApp' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'removeUser' : IDL.Func([IDL.Nat], [], []),
   'resolveAlert' : IDL.Func([IDL.Nat], [], []),
   'resolveIssue' : IDL.Func([IDL.Nat], [], []),
@@ -328,6 +344,11 @@ export const idlService = IDL.Service({
         IDL.Opt(IDL.Nat),
       ],
       [],
+      [],
+    ),
+  'updateLinkedAppStatus' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Opt(LinkedAppView)],
       [],
     ),
   'updateProductMeta' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [], []),
@@ -502,6 +523,15 @@ export const idlFactory = ({ IDL }) => {
     'registeredAt' : Timestamp,
     'lastSync' : Timestamp,
   });
+  const LinkedAppId = IDL.Text;
+  const LinkedAppView = IDL.Record({
+    'id' : LinkedAppId,
+    'status' : IDL.Text,
+    'baseUrl' : IDL.Text,
+    'appCode' : IDL.Text,
+    'name' : IDL.Text,
+    'addedAt' : Timestamp,
+  });
   const ActivityEventType = IDL.Variant({
     'action' : IDL.Null,
     'login' : IDL.Null,
@@ -608,6 +638,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IssueView)],
         ['query'],
       ),
+    'listLinkedApps' : IDL.Func([], [IDL.Vec(LinkedAppView)], ['query']),
     'listNotifications' : IDL.Func(
         [IDL.Opt(NotificationType), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Bool)],
         [IDL.Vec(NotificationView)],
@@ -635,11 +666,17 @@ export const idlFactory = ({ IDL }) => {
     'markNotificationRead' : IDL.Func([IDL.Nat], [], []),
     'markUpdateDeployed' : IDL.Func([IDL.Nat], [], []),
     'reconnectProduct' : IDL.Func([IDL.Nat], [], []),
+    'registerLinkedApp' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [LinkedAppView],
+        [],
+      ),
     'registerProduct' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text],
         [ProductView],
         [],
       ),
+    'removeLinkedApp' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'removeUser' : IDL.Func([IDL.Nat], [], []),
     'resolveAlert' : IDL.Func([IDL.Nat], [], []),
     'resolveIssue' : IDL.Func([IDL.Nat], [], []),
@@ -669,6 +706,11 @@ export const idlFactory = ({ IDL }) => {
           IDL.Opt(IDL.Nat),
         ],
         [],
+        [],
+      ),
+    'updateLinkedAppStatus' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Opt(LinkedAppView)],
         [],
       ),
     'updateProductMeta' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [], []),

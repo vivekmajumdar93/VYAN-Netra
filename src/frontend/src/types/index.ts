@@ -12,6 +12,7 @@ export type {
   EmailLog,
   IssueComment,
   UserActivity,
+  LinkedAppView,
   Id,
   ProductId,
   UserId,

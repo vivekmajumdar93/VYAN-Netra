@@ -3,12 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import environment from "vite-plugin-environment";
 
-const ii_url =
-  process.env.DFX_NETWORK === "local"
-    ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8081/`
-    : `https://identity.internetcomputer.org/`;
-
-process.env.II_URL = process.env.II_URL || ii_url;
+// Firebase integration will be linked here by VYAN Labs
 process.env.STORAGE_GATEWAY_URL =
   process.env.STORAGE_GATEWAY_URL || "https://blob.caffeine.ai";
 
@@ -40,7 +35,6 @@ export default defineConfig({
   plugins: [
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
-    environment(["II_URL"]),
     environment(["STORAGE_GATEWAY_URL"]),
     react(),
   ],

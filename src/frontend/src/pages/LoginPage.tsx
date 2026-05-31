@@ -1,10 +1,17 @@
 import { Button } from "@/components/ui/button";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
-import { Loader2, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RECOGNIZED_ADMINS, useVyanAuth } from "@/hooks/use-vyan-auth";
+import { Fingerprint, Shield } from "lucide-react";
+import { useState } from "react";
 
 export default function LoginPage() {
-  const { login, loginStatus } = useInternetIdentity();
-  const isLoading = loginStatus === "logging-in";
+  const { login } = useVyanAuth();
+  const [email, setEmail] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    login(email || "admin@vyanlabs.com");
+  }
 
   return (
     <div
@@ -43,7 +50,7 @@ export default function LoginPage() {
 
       {/* Central login card */}
       <div
-        className="relative z-10 flex flex-col items-center gap-8 px-8 py-10 rounded-2xl"
+        className="relative z-10 flex flex-col items-center gap-8 px-8 py-10 rounded-2xl w-full max-w-sm"
         style={{
           backdropFilter: "blur(16px)",
           background: "rgba(5,10,25,0.7)",
@@ -89,36 +96,85 @@ export default function LoginPage() {
         <div className="w-full h-px bg-gradient-to-r from-transparent via-[rgba(91,157,255,0.3)] to-transparent" />
 
         {/* Auth section */}
-        <div className="flex flex-col items-center gap-5 w-full max-w-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col items-center gap-5 w-full"
+        >
           <div className="flex flex-col items-center gap-2 text-center">
-            <Shield className="w-5 h-5 text-blue-400" />
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-blue-400" />
+              <span className="text-xs font-mono text-blue-400 tracking-widest uppercase">
+                VYAN Security
+              </span>
+            </div>
             <p className="text-sm text-[rgba(232,232,255,0.65)] font-body leading-relaxed">
-              Authenticate with Internet Identity to access
+              Enter your admin email to access
               <br />
-              the unified admin console.
+              the unified command console.
             </p>
           </div>
 
+          <Input
+            type="email"
+            placeholder="admin@vyanlabs.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] placeholder:text-[rgba(232,232,255,0.25)] font-mono text-sm focus-visible:ring-blue-500/40"
+            data-ocid="login.email.input"
+          />
+
+          {/* Quick-access chips */}
+          <div className="flex flex-col gap-1.5 w-full">
+            <p className="text-[10px] font-mono text-[rgba(232,232,255,0.3)] uppercase tracking-widest text-center">
+              Quick access
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {Object.values(RECOGNIZED_ADMINS).map((admin) => (
+                <button
+                  key={admin.email}
+                  type="button"
+                  onClick={() => setEmail(admin.email)}
+                  className="w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center justify-between gap-2"
+                  style={{
+                    background:
+                      email === admin.email
+                        ? "rgba(91,157,255,0.12)"
+                        : "rgba(91,157,255,0.05)",
+                    border: `1px solid ${email === admin.email ? "rgba(91,157,255,0.3)" : "rgba(91,157,255,0.1)"}`,
+                  }}
+                  data-ocid={`login.quickaccess.${admin.email.includes("vivek") ? "vivek" : "admin"}`}
+                >
+                  <span className="text-xs font-mono text-[rgba(232,232,255,0.6)] truncate">
+                    {admin.email}
+                  </span>
+                  <span
+                    className="text-[9px] font-mono px-1.5 py-0.5 rounded-full flex-shrink-0"
+                    style={{
+                      background: "rgba(147,89,255,0.15)",
+                      color: "#c084fc",
+                      border: "1px solid rgba(147,89,255,0.25)",
+                    }}
+                  >
+                    {admin.role}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button
-            onClick={() => login()}
-            disabled={isLoading}
-            className="w-full h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white border-0 font-display tracking-wide text-sm shadow-[0_0_24px_rgba(91,157,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(91,157,255,0.5)] disabled:opacity-60"
-            data-ocid="login.signin.button"
+            type="submit"
+            className="w-full h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white border-0 font-display tracking-wide text-sm shadow-[0_0_24px_rgba(91,157,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(91,157,255,0.5)]"
+            data-ocid="login.admin_access.button"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Authenticating…
-              </>
-            ) : (
-              "Sign in with Internet Identity"
-            )}
+            <Fingerprint className="w-4 h-4 mr-2" />
+            Admin Access
           </Button>
 
           <p className="text-[11px] text-[rgba(232,232,255,0.25)] font-mono text-center">
-            Secured by the Internet Computer Protocol
+            Protected by VYAN Security · VYAN Labs
           </p>
-        </div>
+        </form>
       </div>
 
       {/* Bottom branding */}

@@ -59,6 +59,14 @@ export interface NotificationView {
     severity: NotificationSeverity;
     snoozed: boolean;
 }
+export interface LinkedAppView {
+    id: LinkedAppId;
+    status: string;
+    baseUrl: string;
+    appCode: string;
+    name: string;
+    addedAt: Timestamp;
+}
 export interface EmailTemplateView {
     id: Id;
     subject: string;
@@ -99,6 +107,7 @@ export interface SystemMetrics {
     networkUptime: bigint;
     apiLatency: bigint;
 }
+export type LinkedAppId = string;
 export type UserId = bigint;
 export interface ProductView {
     id: ProductId;
@@ -206,6 +215,7 @@ export interface backendInterface {
     listEmailTemplates(productId: bigint): Promise<Array<EmailTemplateView>>;
     listIssueComments(issueId: bigint): Promise<Array<IssueComment>>;
     listIssues(productId: bigint | null, status: IssueStatus | null, severity: IssueSeverity | null): Promise<Array<IssueView>>;
+    listLinkedApps(): Promise<Array<LinkedAppView>>;
     listNotifications(notifType: NotificationType | null, productId: bigint | null, isRead: boolean | null): Promise<Array<NotificationView>>;
     listProductUpdates(productId: bigint): Promise<Array<UpdateView>>;
     listProducts(): Promise<Array<ProductView>>;
@@ -217,7 +227,9 @@ export interface backendInterface {
     markNotificationRead(id: bigint): Promise<void>;
     markUpdateDeployed(id: bigint): Promise<void>;
     reconnectProduct(id: bigint): Promise<void>;
+    registerLinkedApp(name: string, baseUrl: string, appCode: string): Promise<LinkedAppView>;
     registerProduct(name: string, description: string, code: string): Promise<ProductView>;
+    removeLinkedApp(id: string): Promise<boolean>;
     removeUser(id: bigint): Promise<void>;
     resolveAlert(id: bigint): Promise<void>;
     resolveIssue(id: bigint): Promise<void>;
@@ -230,6 +242,7 @@ export interface backendInterface {
     updateEmailConfig(id: bigint, senderName: string, senderEmail: string, bounceEmail: string, isActive: boolean): Promise<void>;
     updateEmailTemplate(id: bigint, subject: string, body: string): Promise<void>;
     updateIssue(id: bigint, title: string, description: string, severity: IssueSeverity, status: IssueStatus, assignedTo: bigint | null): Promise<void>;
+    updateLinkedAppStatus(id: string, status: string): Promise<LinkedAppView | null>;
     updateProductMeta(id: bigint, name: string, description: string): Promise<void>;
     updateUserRole(id: bigint, role: UserRole): Promise<void>;
 }

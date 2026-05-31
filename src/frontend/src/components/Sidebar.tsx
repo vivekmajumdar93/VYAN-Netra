@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Bell,
   LayoutDashboard,
+  Link2,
   Mail,
   Package,
   RefreshCw,
@@ -37,6 +38,12 @@ export default function Sidebar() {
   const navItems: NavItem[] = [
     { id: "dashboard", label: "Dashboard", path: "/", icon: LayoutDashboard },
     { id: "products", label: "Products", path: "/products", icon: Package },
+    {
+      id: "linked-apps",
+      label: "Linked Apps",
+      path: "/linked-apps",
+      icon: Link2,
+    },
     { id: "users", label: "Users", path: "/users", icon: Users },
     {
       id: "monitoring",

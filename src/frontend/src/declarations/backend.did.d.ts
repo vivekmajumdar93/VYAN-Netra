@@ -80,6 +80,15 @@ export interface IssueView {
   'updatedAt' : Timestamp,
   'severity' : IssueSeverity,
 }
+export type LinkedAppId = string;
+export interface LinkedAppView {
+  'id' : LinkedAppId,
+  'status' : string,
+  'baseUrl' : string,
+  'appCode' : string,
+  'name' : string,
+  'addedAt' : Timestamp,
+}
 export type MetricSeverity = { 'warning' : null } |
   { 'info' : null } |
   { 'critical' : null };
@@ -210,6 +219,7 @@ export interface _SERVICE {
     [[] | [bigint], [] | [IssueStatus], [] | [IssueSeverity]],
     Array<IssueView>
   >,
+  'listLinkedApps' : ActorMethod<[], Array<LinkedAppView>>,
   'listNotifications' : ActorMethod<
     [[] | [NotificationType], [] | [bigint], [] | [boolean]],
     Array<NotificationView>
@@ -227,7 +237,9 @@ export interface _SERVICE {
   'markNotificationRead' : ActorMethod<[bigint], undefined>,
   'markUpdateDeployed' : ActorMethod<[bigint], undefined>,
   'reconnectProduct' : ActorMethod<[bigint], undefined>,
+  'registerLinkedApp' : ActorMethod<[string, string, string], LinkedAppView>,
   'registerProduct' : ActorMethod<[string, string, string], ProductView>,
+  'removeLinkedApp' : ActorMethod<[string], boolean>,
   'removeUser' : ActorMethod<[bigint], undefined>,
   'resolveAlert' : ActorMethod<[bigint], undefined>,
   'resolveIssue' : ActorMethod<[bigint], undefined>,
@@ -249,6 +261,7 @@ export interface _SERVICE {
     [bigint, string, string, IssueSeverity, IssueStatus, [] | [bigint]],
     undefined
   >,
+  'updateLinkedAppStatus' : ActorMethod<[string, string], [] | [LinkedAppView]>,
   'updateProductMeta' : ActorMethod<[bigint, string, string], undefined>,
   'updateUserRole' : ActorMethod<[bigint, UserRole], undefined>,
 }

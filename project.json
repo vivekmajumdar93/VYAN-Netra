@@ -1,25 +1,22 @@
 {
-  "overview": "VYAN Netra is a unified admin console for the VYAN Labs ecosystem. It brings all your apps, websites, and platforms under one command center — connected via unique 6-digit registration codes. Monitor system health in real time, manage users across products, track issues, control notifications, and oversee updates and emails — all from a single dark, cosmic-themed interface built for VYAN's AI Void aesthetic.",
+  "overview": "VYAN Netra is a master admin console for managing all VYAN Labs products, apps, and platforms from a single command center.",
   "features": [
-    "Product registration via 6-digit alphanumeric codes",
-    "Unified user management across all connected products",
-    "Real-time system monitoring agent (CPU, memory, disk, API, network)",
-    "Notifications and alerts center with severity levels",
-    "Issue and incident management with comment threads",
-    "Updates and changelog management with deployment scheduling",
-    "Email control panel with template library",
-    "Cosmic AI void theme with nano-particle animated orbs and glass morphism"
+    "Register and link external VYAN apps using a secure 6-digit alphanumeric app code",
+    "Automatic X-App-Code header injection on every request to a linked app",
+    "Live connection status per linked app with error detection",
+    "Graceful 'Connection Refused' error display on unauthorized API access",
+    "Debounced fetch controls to prevent runaway API calls",
+    "Dynamic routing to each app's registered Vercel API URL",
+    "Dark void theme with cosmic glassmorphism and nano-particle animation"
   ],
   "category": "admin-dashboard",
   "tags": [
     "admin",
-    "dashboard",
-    "monitoring",
-    "vyan",
+    "vyan-labs",
+    "multi-app",
+    "rest-bridge",
     "console",
-    "glassmorphism",
-    "multi-product",
-    "system-health"
+    "glassmorphism"
   ],
-  "last_updated": "2026-05-17T13:22:51.082Z"
+  "last_updated": "2026-05-31T21:51:47.488Z"
 }
