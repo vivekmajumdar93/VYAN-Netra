@@ -328,7 +328,7 @@ export default function DashboardPage() {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-xs font-mono text-[rgba(232,232,255,0.4)] uppercase tracking-widest mb-1">
-                VYAN Labs · Command Nexus
+                VYAN · Command Nexus
               </p>
               <h1 className="text-2xl font-display font-bold gradient-text">
                 VYAN Netra

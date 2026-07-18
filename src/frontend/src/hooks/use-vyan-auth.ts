@@ -1,4 +1,4 @@
-// Firebase integration will be linked here by VYAN Labs
+// Firebase integration will be linked here by VYAN
 import { createContext, useContext } from "react";
 
 export interface VyanUser {
@@ -8,8 +8,8 @@ export interface VyanUser {
 }
 
 const RECOGNIZED_ADMINS: Record<string, VyanUser> = {
-  "admin@vyanlabs.com": {
-    email: "admin@vyanlabs.com",
+  "admin@vyan.com": {
+    email: "admin@vyan.com",
     name: "VYAN Admin",
     role: "Super Admin",
   },
@@ -59,7 +59,7 @@ export interface VyanAuthContextValue {
 }
 
 const DEFAULT_USER: VyanUser = {
-  email: "admin@vyanlabs.com",
+  email: "admin@vyan.com",
   name: "VYAN Admin",
   role: "Super Admin",
 };

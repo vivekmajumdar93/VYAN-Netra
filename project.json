@@ -1,5 +1,5 @@
 {
-  "overview": "VYAN Netra is a master admin console for managing all VYAN Labs products, apps, and platforms from a single command center.",
+  "overview": "VYAN Netra is a master admin console for managing all VYAN products, apps, and platforms from a single command center.",
   "features": [
     "Register and link external VYAN apps using a secure 6-digit alphanumeric app code",
     "Automatic X-App-Code header injection on every request to a linked app",
@@ -12,7 +12,7 @@
   "category": "admin-dashboard",
   "tags": [
     "admin",
-    "vyan-labs",
+    "vyan",
     "multi-app",
     "rest-bridge",
     "console",

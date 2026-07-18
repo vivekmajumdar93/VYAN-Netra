@@ -1,7 +1,7 @@
 # VYAN Netra Design Brief
 
 ## Overview
-Cosmic AI void admin command center for VYAN Labs ecosystem. Immersive, futuristic space-age interface with animated nano-particle effects and glass morphism surfaces.
+Cosmic AI void admin command center for the VYAN ecosystem. Immersive, futuristic space-age interface with animated nano-particle effects and glass morphism surfaces.
 
 ## Visual Direction
 **Tone**: Bold, high-tech, immersive, premium futuristic | **Differentiation**: Living nano-particle orb system in primordial core hero section; unified command interface across 8 product domains.
@@ -18,7 +18,7 @@ Cosmic AI void admin command center for VYAN Labs ecosystem. Immersive, futurist
 | Destruction Red | N/A | 0.58 0.22 25 | Error, warnings, critical alerts |
 
 ## Typography
-**Display Font**: Space Grotesk (geometric, tech-forward, futuristic) | **Body Font**: General Sans (refined, readable, modern) | **Monospace**: Geist Mono (dashboard metrics, code areas)
+**Display Font**: VYAN Shunyalekh (official VYAN brand typeface — geometric constructed serif) | **Body Font**: VYAN Shunyalekh | **Monospace**: Geist Mono (dashboard metrics, code areas)
 
 ## Elevation & Depth
 Glass morphism with frosted effect (12px backdrop blur). Layered surfaces: void background → semi-transparent cards (10-15% opacity) → elevated interactive elements (glow accents). Subtle depth shadows only on interactive zones.

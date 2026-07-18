@@ -26,7 +26,7 @@ declare global {
 const queryClient = new QueryClient();
 
 const DEFAULT_USER: VyanUser = {
-  email: "admin@vyanlabs.com",
+  email: "admin@vyan.com",
   name: "VYAN Admin",
   role: "Super Admin",
 };

@@ -77,7 +77,7 @@ export default function Sidebar() {
       <div className="flex items-center gap-3 px-5 py-5 border-b border-[rgba(91,157,255,0.12)]">
         <img
           src="https://raw.githubusercontent.com/vivekmajumdar93/VYAN-Technologies-Logo/main/IMG_9695.png"
-          alt="VYAN Labs"
+          alt="VYAN"
           className="flex-shrink-0"
           style={{ maxHeight: 40, width: "auto", objectFit: "contain" }}
         />
@@ -91,7 +91,7 @@ export default function Sidebar() {
             </span>
           </div>
           <p className="text-[10px] text-[rgba(232,232,255,0.4)] font-mono uppercase tracking-widest leading-none mt-0.5">
-            VYAN Labs
+            VYAN
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="px-4 py-3 border-t border-[rgba(91,157,255,0.12)]">
         <p className="text-[10px] text-[rgba(232,232,255,0.25)] font-mono text-center leading-relaxed">
-          © {new Date().getFullYear()} VYAN Labs
+          © {new Date().getFullYear()} VYAN
         </p>
         <p className="text-[9px] text-[rgba(232,232,255,0.18)] font-mono text-center tracking-widest uppercase mt-0.5">
           VYAN Netra · VYAN Ecosystem

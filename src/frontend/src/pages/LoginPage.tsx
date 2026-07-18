@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    login(email || "admin@vyanlabs.com");
+    login(email || "admin@vyan.com");
   }
 
   return (
@@ -65,7 +65,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 opacity-20 blur-2xl" />
             <img
               src="https://raw.githubusercontent.com/vivekmajumdar93/VYAN-Technologies-Logo/main/IMG_9695.png"
-              alt="VYAN Labs"
+              alt="VYAN"
               style={{
                 maxWidth: 140,
                 width: "100%",
@@ -87,7 +87,7 @@ export default function LoginPage() {
               Admin Command Console
             </p>
             <p className="text-xs text-[rgba(232,232,255,0.3)] mt-1">
-              by VYAN Labs
+              by VYAN
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function LoginPage() {
 
           <Input
             type="email"
-            placeholder="admin@vyanlabs.com"
+            placeholder="admin@vyan.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] placeholder:text-[rgba(232,232,255,0.25)] font-mono text-sm focus-visible:ring-blue-500/40"
@@ -172,7 +172,7 @@ export default function LoginPage() {
           </Button>
 
           <p className="text-[11px] text-[rgba(232,232,255,0.25)] font-mono text-center">
-            Protected by VYAN Security · VYAN Labs
+            Protected by VYAN Security · VYAN
           </p>
         </form>
       </div>
@@ -180,7 +180,7 @@ export default function LoginPage() {
       {/* Bottom branding */}
       <div className="relative z-10 mt-8 flex flex-col items-center gap-1">
         <p className="text-[11px] text-[rgba(232,232,255,0.25)] font-mono">
-          © {new Date().getFullYear()} VYAN Labs · All rights reserved
+          © {new Date().getFullYear()} VYAN · All rights reserved
         </p>
         <p className="text-[10px] text-[rgba(232,232,255,0.15)] font-mono tracking-widest uppercase">
           VYAN Netra · VYAN Ecosystem

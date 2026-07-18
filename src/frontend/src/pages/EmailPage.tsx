@@ -481,7 +481,7 @@ function AddConfigModal({
               value={senderEmail}
               onChange={(e) => setSenderEmail(e.target.value)}
               required
-              placeholder="no-reply@vyanlabs.com"
+              placeholder="no-reply@vyan.com"
               data-ocid="email.config.sender_email_new.input"
               className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF]"
             />
@@ -495,7 +495,7 @@ function AddConfigModal({
               value={bounceEmail}
               onChange={(e) => setBounceEmail(e.target.value)}
               required
-              placeholder="bounce@vyanlabs.com"
+              placeholder="bounce@vyan.com"
               data-ocid="email.config.bounce_email_new.input"
               className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF]"
             />

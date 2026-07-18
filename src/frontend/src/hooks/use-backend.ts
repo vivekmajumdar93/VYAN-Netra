@@ -11,7 +11,7 @@ import type {
 } from "@/backend";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// Firebase integration will be linked here by VYAN Labs
+// Firebase integration will be linked here by VYAN
 
 function useBackendActor() {
   return useActor(createActor);

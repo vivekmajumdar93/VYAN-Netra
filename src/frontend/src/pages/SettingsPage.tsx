@@ -305,7 +305,7 @@ export default function SettingsPage() {
                   VYAN Security · Direct Admin Access
                 </p>
                 <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mt-0.5">
-                  {/* Firebase integration will be linked here by VYAN Labs */}
+                  {/* Firebase integration will be linked here by VYAN */}
                   Firebase auth integration pending — open access mode active
                 </p>
               </div>
@@ -402,7 +402,7 @@ export default function SettingsPage() {
 
             <div className="space-y-0.5 divide-y divide-[rgba(91,157,255,0.07)]">
               <InfoRow label="Product" value="VYAN Netra" />
-              <InfoRow label="Company" value="VYAN Labs" />
+              <InfoRow label="Company" value="VYAN" />
               <InfoRow label="Ecosystem" value="VYAN Ecosystem" />
               <InfoRow label="Version" value="v1.0.0" />
               <InfoRow label="Security" value="VYAN Security" />

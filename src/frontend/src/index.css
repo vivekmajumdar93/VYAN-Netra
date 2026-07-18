@@ -1,14 +1,30 @@
 /* ── VYAN AI Void Font Faces ────────────────────────────────────── */
 @font-face {
-  font-family: "Space Grotesk";
-  src: url("/assets/fonts/SpaceGrotesk-Variable.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "VYAN Shunyalekh";
+  src: url("/assets/fonts/VYANShunyalekh-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "General Sans";
-  src: url("/assets/fonts/GeneralSans-Variable.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "VYAN Shunyalekh";
+  src: url("/assets/fonts/VYANShunyalekh-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "VYAN Shunyalekh";
+  src: url("/assets/fonts/VYANShunyalekh-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "VYAN Shunyalekh";
+  src: url("/assets/fonts/VYANShunyalekh-BoldItalic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
   font-display: swap;
 }
 @font-face {
@@ -24,8 +40,8 @@
 
 @layer base {
   :root {
-    --font-display: "Space Grotesk", sans-serif;
-    --font-body: "General Sans", sans-serif;
+    --font-display: "VYAN Shunyalekh", Georgia, "Times New Roman", serif;
+    --font-body: "VYAN Shunyalekh", Georgia, "Times New Roman", serif;
     --font-mono: "Geist Mono", monospace;
     --radius: 0.5rem;
 
