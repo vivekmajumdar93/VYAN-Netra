@@ -10,7 +10,7 @@ module {
     body : Text;
     severity : NotificationSeverity;
     notifType : NotificationType;
-    productId : ?Nat;
+    appId : ?Text;
     var isRead : Bool;
     var snoozed : Bool;
     var snoozedUntil : ?Common.Timestamp;
@@ -23,7 +23,7 @@ module {
     body : Text;
     severity : NotificationSeverity;
     notifType : NotificationType;
-    productId : ?Nat;
+    appId : ?Text;
     isRead : Bool;
     snoozed : Bool;
     snoozedUntil : ?Common.Timestamp;

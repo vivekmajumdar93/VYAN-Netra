@@ -5,7 +5,7 @@ module {
 
   public type SystemMetrics = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     cpu : Nat;
     memory : Nat;
     disk : Nat;
@@ -17,7 +17,7 @@ module {
 
   public type Alert = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     metricType : Text;
     severity : MetricSeverity;
     value : Nat;
@@ -29,7 +29,7 @@ module {
 
   public type AlertView = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     metricType : Text;
     severity : MetricSeverity;
     value : Nat;

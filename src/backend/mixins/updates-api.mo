@@ -9,12 +9,12 @@ mixin (
 ) {
 
   public func createUpdate(
-    productId : Nat,
+    appId : Text,
     version : Text,
     releaseNotes : Text,
     size : Nat,
   ) : async Types.UpdateView {
-    UpdatesLib.create(updates, updateState, productId, version, releaseNotes, size);
+    UpdatesLib.create(updates, updateState, appId, version, releaseNotes, size);
   };
 
   public func scheduleUpdate(id : Nat, scheduledAt : Time.Time) : async () {
@@ -25,8 +25,8 @@ mixin (
     UpdatesLib.markDeployed(updates, id);
   };
 
-  public query func listProductUpdates(productId : Nat) : async [Types.UpdateView] {
-    UpdatesLib.listByProduct(updates, productId);
+  public query func listAppUpdates(appId : Text) : async [Types.UpdateView] {
+    UpdatesLib.listByApp(updates, appId);
   };
 
   public query func listAllUpdates() : async [Types.UpdateView] {

@@ -1,14 +1,19 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useSetZohoConfig, useZohoStatus } from "@/hooks/use-backend";
 import { useVyanAuth } from "@/hooks/use-vyan-auth";
 import {
   Activity,
   AtSign,
+  CheckCircle2,
   ExternalLink,
   Info,
   Link2,
   LogOut,
+  Mail,
   Palette,
   Shield,
   Sparkles,
@@ -17,6 +22,112 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+// ── Zoho Email config form ──────────────────────────────────────────────
+function ZohoConfigForm() {
+  const { data: status } = useZohoStatus();
+  const setZoho = useSetZohoConfig();
+  const [accountId, setAccountId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [fromAddress, setFromAddress] = useState(status?.fromAddress ?? "");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accountId.trim() || !accessToken.trim() || !fromAddress.trim()) {
+      toast.error("All three fields are required");
+      return;
+    }
+    try {
+      await setZoho.mutateAsync({
+        accountId: accountId.trim(),
+        accessToken: accessToken.trim(),
+        fromAddress: fromAddress.trim(),
+      });
+      toast.success("Zoho configuration saved");
+      setAccessToken("");
+    } catch {
+      toast.error("Failed to save Zoho configuration");
+    }
+  }
+
+  return (
+    <div className="py-3 space-y-4">
+      {status?.configured && (
+        <div
+          className="rounded-xl p-3 flex items-center gap-2.5"
+          style={{
+            background: "rgba(52,211,153,0.08)",
+            border: "1px solid rgba(52,211,153,0.2)",
+          }}
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <p className="text-[11px] font-mono text-emerald-300">
+            Configured — sending as {status.fromAddress} (account{" "}
+            {status.accountId})
+          </p>
+        </div>
+      )}
+      <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] leading-relaxed">
+        Netra sends real email through Zoho's Mail API (an HTTPS outcall — not
+        raw SMTP, which a canister can't speak). The access token is write-only:
+        once saved, it's never returned to the browser again. Zoho tokens expire
+        periodically — re-paste a fresh one here when sends start failing.
+      </p>
+      <form onSubmit={handleSave} className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+            Zoho Account ID
+          </Label>
+          <Input
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            placeholder="e.g. 60001234567"
+            data-ocid="settings.zoho.account_id"
+            className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] font-mono text-xs"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+            From Address
+          </Label>
+          <Input
+            type="email"
+            value={fromAddress}
+            onChange={(e) => setFromAddress(e.target.value)}
+            placeholder="no-reply@vyan.com"
+            data-ocid="settings.zoho.from_address"
+            className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] font-mono text-xs"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+            Access Token
+          </Label>
+          <Input
+            type="password"
+            value={accessToken}
+            onChange={(e) => setAccessToken(e.target.value)}
+            placeholder={
+              status?.configured
+                ? "•••••••• (unchanged)"
+                : "Zoho OAuth access token"
+            }
+            data-ocid="settings.zoho.access_token"
+            className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] font-mono text-xs"
+          />
+        </div>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={setZoho.isPending}
+          data-ocid="settings.zoho.save_button"
+        >
+          {setZoho.isPending ? "Saving…" : "Save Zoho Config"}
+        </Button>
+      </form>
+    </div>
+  );
+}
 
 // ── Local-storage helpers ───────────────────────────────────────────────
 
@@ -338,14 +449,14 @@ export default function SettingsPage() {
                 </p>
               </div>
               <a
-                href="/linked-apps"
+                href="/apps"
                 className="flex-shrink-0 inline-flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-[rgba(91,157,255,0.12)]"
                 style={{
                   background: "rgba(91,157,255,0.08)",
                   border: "1px solid rgba(91,157,255,0.25)",
                   color: "rgba(91,157,255,0.9)",
                 }}
-                data-ocid="settings.linked_apps.link"
+                data-ocid="settings.apps.link"
               >
                 <ExternalLink className="w-3 h-3" /> Manage
               </a>
@@ -353,12 +464,22 @@ export default function SettingsPage() {
           </div>
         </Section>
 
+        {/* ── Zoho Email ── */}
+        <Section
+          icon={<Mail className="w-3.5 h-3.5" />}
+          title="Zoho Email"
+          ocid="settings.zoho.section"
+          index={5}
+        >
+          <ZohoConfigForm />
+        </Section>
+
         {/* ── About ── */}
         <Section
           icon={<Info className="w-3.5 h-3.5" />}
           title="About"
           ocid="settings.about.section"
-          index={5}
+          index={6}
         >
           <div className="py-1">
             {/* VYAN Netra brand block */}

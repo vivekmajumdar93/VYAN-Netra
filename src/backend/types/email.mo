@@ -6,7 +6,7 @@ module {
 
   public type EmailConfig = {
     id : EmailConfigId;
-    productId : Nat;
+    appId : Text;
     senderName : Text;
     senderEmail : Text;
     bounceEmail : Text;
@@ -16,7 +16,7 @@ module {
 
   public type EmailConfigView = {
     id : EmailConfigId;
-    productId : Nat;
+    appId : Text;
     senderName : Text;
     senderEmail : Text;
     bounceEmail : Text;
@@ -26,16 +26,17 @@ module {
 
   public type EmailLog = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     recipient : Text;
     subject : Text;
     status : EmailStatus;
+    detail : Text; // HTTP status / error text, for debugging failed sends
     timestamp : Common.Timestamp;
   };
 
   public type EmailTemplate = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     name : Text;
     subject : Text;
     var body : Text;
@@ -44,10 +45,24 @@ module {
 
   public type EmailTemplateView = {
     id : Common.Id;
-    productId : Nat;
+    appId : Text;
     name : Text;
     subject : Text;
     body : Text;
     lastModified : Common.Timestamp;
+  };
+
+  // Zoho Mail API credentials, set once via Settings. The access token is
+  // write-only from the outside — no query method ever returns it.
+  public type ZohoConfig = {
+    var accountId : Text;
+    var accessToken : Text;
+    var fromAddress : Text;
+  };
+
+  public type ZohoStatusView = {
+    configured : Bool;
+    accountId : Text;
+    fromAddress : Text;
   };
 };

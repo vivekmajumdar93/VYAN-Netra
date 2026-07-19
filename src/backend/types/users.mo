@@ -3,13 +3,14 @@ import Common "common";
 module {
   public type UserId = Common.Id;
   public type UserRole = { #admin; #manager; #viewer };
-  public type UserStatus = { #active; #suspended };
+  public type UserStatus = { #pending; #active; #held; #rejected };
 
   public type User = {
     id : UserId;
-    productId : Nat;
-    name : Text;
-    email : Text;
+    appId : Text;
+    externalId : Text; // the user's own id within their app
+    var name : Text;
+    var email : Text;
     var role : UserRole;
     var status : UserStatus;
     var lastActivity : Common.Timestamp;
@@ -18,7 +19,8 @@ module {
 
   public type UserView = {
     id : UserId;
-    productId : Nat;
+    appId : Text;
+    externalId : Text;
     name : Text;
     email : Text;
     role : UserRole;
@@ -32,7 +34,7 @@ module {
   public type UserActivity = {
     id : Common.Id;
     userId : UserId;
-    productId : Nat;
+    appId : Text;
     eventType : ActivityEventType;
     description : Text;
     timestamp : Common.Timestamp;

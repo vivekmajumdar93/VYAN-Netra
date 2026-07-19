@@ -13,9 +13,9 @@ mixin (
     body : Text,
     severity : Types.NotificationSeverity,
     notifType : Types.NotificationType,
-    productId : ?Nat,
+    appId : ?Text,
   ) : async Types.NotificationView {
-    NotificationsLib.create(notifications, notifState, title, body, severity, notifType, productId);
+    NotificationsLib.create(notifications, notifState, title, body, severity, notifType, appId);
   };
 
   public func markNotificationRead(id : Nat) : async () {
@@ -36,10 +36,10 @@ mixin (
 
   public query func listNotifications(
     notifType : ?Types.NotificationType,
-    productId : ?Nat,
+    appId : ?Text,
     isRead : ?Bool,
   ) : async [Types.NotificationView] {
-    NotificationsLib.listFiltered(notifications, notifType, productId, isRead);
+    NotificationsLib.listFiltered(notifications, notifType, appId, isRead);
   };
 
 };

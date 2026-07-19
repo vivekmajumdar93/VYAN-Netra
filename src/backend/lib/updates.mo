@@ -7,7 +7,7 @@ module {
 
   public func toView(u : Types.Update) : Types.UpdateView = {
     id = u.id;
-    productId = u.productId;
+    appId = u.appId;
     version = u.version;
     releaseNotes = u.releaseNotes;
     size = u.size;
@@ -20,7 +20,7 @@ module {
   public func create(
     updates : List.List<Types.Update>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     version : Text,
     releaseNotes : Text,
     size : Nat,
@@ -29,7 +29,7 @@ module {
     state.nextId += 1;
     let upd : Types.Update = {
       id;
-      productId;
+      appId;
       version;
       releaseNotes;
       size;
@@ -50,7 +50,7 @@ module {
           if (item.id == id) {
             {
               id = item.id;
-              productId = item.productId;
+              appId = item.appId;
               version = item.version;
               releaseNotes = item.releaseNotes;
               size = item.size;
@@ -76,8 +76,8 @@ module {
     };
   };
 
-  public func listByProduct(updates : List.List<Types.Update>, productId : Nat) : [Types.UpdateView] {
-    updates.filter(func(u) { u.productId == productId })
+  public func listByApp(updates : List.List<Types.Update>, appId : Text) : [Types.UpdateView] {
+    updates.filter(func(u) { u.appId == appId })
       .map<Types.Update, Types.UpdateView>(toView)
       .toArray();
   };

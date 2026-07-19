@@ -13,10 +13,10 @@ mixin (
     title : Text,
     description : Text,
     severity : Types.IssueSeverity,
-    productId : Nat,
+    appId : Text,
     assignedTo : ?Nat,
   ) : async Types.IssueView {
-    IssuesLib.create(issues, issueState, title, description, severity, productId, assignedTo);
+    IssuesLib.create(issues, issueState, title, description, severity, appId, assignedTo);
   };
 
   public func updateIssue(
@@ -43,11 +43,11 @@ mixin (
   };
 
   public query func listIssues(
-    productId : ?Nat,
+    appId : ?Text,
     status : ?Types.IssueStatus,
     severity : ?Types.IssueSeverity,
   ) : async [Types.IssueView] {
-    IssuesLib.listFiltered(issues, productId, status, severity);
+    IssuesLib.listFiltered(issues, appId, status, severity);
   };
 
   public query func listIssueComments(issueId : Nat) : async [Types.IssueComment] {

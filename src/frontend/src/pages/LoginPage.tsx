@@ -7,10 +7,14 @@ import { useState } from "react";
 export default function LoginPage() {
   const { login } = useVyanAuth();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    login(email || "admin@vyan.com");
+    const ok = login(email.trim());
+    if (!ok) {
+      setError("That email isn't on the VYAN admin allowlist.");
+    }
   }
 
   return (
@@ -86,9 +90,7 @@ export default function LoginPage() {
             <p className="text-sm font-mono text-[rgba(232,232,255,0.4)] tracking-widest uppercase mt-1">
               Admin Command Console
             </p>
-            <p className="text-xs text-[rgba(232,232,255,0.3)] mt-1">
-              by VYAN
-            </p>
+            <p className="text-xs text-[rgba(232,232,255,0.3)] mt-1">by VYAN</p>
           </div>
         </div>
 
@@ -118,10 +120,21 @@ export default function LoginPage() {
             type="email"
             placeholder="admin@vyan.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (error) setError(null);
+            }}
             className="w-full bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] placeholder:text-[rgba(232,232,255,0.25)] font-mono text-sm focus-visible:ring-blue-500/40"
             data-ocid="login.email.input"
           />
+          {error && (
+            <p
+              className="text-[11px] font-mono text-red-400 -mt-3 text-center"
+              data-ocid="login.email.error"
+            >
+              {error}
+            </p>
+          )}
 
           {/* Quick-access chips */}
           <div className="flex flex-col gap-1.5 w-full">

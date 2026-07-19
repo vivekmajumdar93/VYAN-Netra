@@ -11,7 +11,7 @@ module {
     description = i.description;
     severity = i.severity;
     status = i.status;
-    productId = i.productId;
+    appId = i.appId;
     assignedTo = i.assignedTo;
     createdAt = i.createdAt;
     updatedAt = i.updatedAt;
@@ -23,7 +23,7 @@ module {
     title : Text,
     description : Text,
     severity : Types.IssueSeverity,
-    productId : Nat,
+    appId : Text,
     assignedTo : ?Nat,
   ) : Types.IssueView {
     let now = Time.now();
@@ -35,7 +35,7 @@ module {
       description;
       severity;
       var status = #open;
-      productId;
+      appId;
       var assignedTo;
       createdAt = now;
       var updatedAt = now;
@@ -62,7 +62,7 @@ module {
           description;
           severity;
           var status;
-          productId = item.productId;
+          appId = item.appId;
           var assignedTo;
           createdAt = item.createdAt;
           var updatedAt = now;
@@ -107,13 +107,13 @@ module {
 
   public func listFiltered(
     issues : List.List<Types.Issue>,
-    productId : ?Nat,
+    appId : ?Text,
     status : ?Types.IssueStatus,
     severity : ?Types.IssueSeverity,
   ) : [Types.IssueView] {
     issues.filter(func(i) {
-      let pMatch = switch (productId) {
-        case (?pid) { i.productId == pid };
+      let aMatch = switch (appId) {
+        case (?aid) { i.appId == aid };
         case null { true };
       };
       let sMatch = switch (status) {
@@ -124,7 +124,7 @@ module {
         case (?sev) { i.severity == sev };
         case null { true };
       };
-      pMatch and sMatch and sevMatch;
+      aMatch and sMatch and sevMatch;
     })
     .map<Types.Issue, Types.IssueView>(toView)
     .toArray();

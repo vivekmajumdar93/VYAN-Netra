@@ -1,20 +1,12 @@
-// Re-export all backend types for convenience
+// Plain (non-variant) types re-export directly from the backend boundary.
 export type {
-  ProductView,
-  UserView,
   SystemMetrics,
-  AlertView,
-  NotificationView,
-  IssueView,
-  UpdateView,
   EmailConfigView,
   EmailTemplateView,
-  EmailLog,
+  ZohoStatusView,
   IssueComment,
-  UserActivity,
-  LinkedAppView,
   Id,
-  ProductId,
+  AppId,
   UserId,
   IssueId,
   UpdateId,
@@ -23,8 +15,22 @@ export type {
   Time,
 } from "@/backend";
 
+// View types that contain variant fields (severity/status/role/etc.) come
+// from the hooks layer instead — that's where the raw candid encoding
+// (`{ critical: null }`) gets converted to plain string enums.
+export type {
+  AppViewUI as AppView,
+  UserViewUI as UserView,
+  AlertViewUI as AlertView,
+  IssueViewUI as IssueView,
+  UpdateViewUI as UpdateView,
+  NotificationViewUI as NotificationView,
+  EmailLogUI as EmailLog,
+  UserActivityUI as UserActivity,
+} from "@/hooks/use-backend";
+
 export {
-  ProductStatus,
+  AppStatus,
   UserStatus,
   UserRole,
   IssueSeverity,

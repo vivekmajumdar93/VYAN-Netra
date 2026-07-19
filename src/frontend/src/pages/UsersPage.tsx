@@ -1,5 +1,4 @@
 import { ActivityEventType, UserRole, UserStatus } from "@/backend";
-import type { UserActivity, UserView } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,26 +12,29 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  useAcceptUser,
+  useApps,
   useCreateUser,
-  useProducts,
+  useHoldUser,
+  useRejectUser,
   useRemoveUser,
-  useRestoreUser,
-  useSuspendUser,
   useUpdateUserRole,
   useUserActivities,
   useUsers,
 } from "@/hooks/use-backend";
+import type { UserActivity, UserView } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import {
   Activity,
+  Check,
   ChevronDown,
   ChevronRight,
   Clock,
   LogIn,
+  Pause,
   Plus,
   Search,
   Settings,
-  ShieldCheck,
   ShieldOff,
   Trash2,
   UserPlus,
@@ -51,8 +53,37 @@ function roleKey(r: UserRole): string {
 }
 
 function statusKey(s: UserStatus): string {
-  return s === UserStatus.active ? "active" : "suspended";
+  if (s === UserStatus.active) return "active";
+  if (s === UserStatus.held) return "held";
+  if (s === UserStatus.rejected) return "rejected";
+  return "pending";
 }
+
+const STATUS_STYLE: Record<
+  string,
+  { bg: string; color: string; border: string }
+> = {
+  active: {
+    bg: "rgba(52,211,153,0.12)",
+    color: "#34D399",
+    border: "rgba(52,211,153,0.25)",
+  },
+  pending: {
+    bg: "rgba(91,157,255,0.1)",
+    color: "#7BBDFF",
+    border: "rgba(91,157,255,0.25)",
+  },
+  held: {
+    bg: "rgba(251,191,36,0.1)",
+    color: "#FCD34D",
+    border: "rgba(251,191,36,0.25)",
+  },
+  rejected: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#F87171",
+    border: "rgba(239,68,68,0.25)",
+  },
+};
 
 function getInitials(name: string): string {
   return name
@@ -176,7 +207,7 @@ function ConfirmDialog({
 // ── ActivityPanel ─────────────────────────────────────────────────────────────
 
 function ActivityPanel({ user }: { user: UserView }) {
-  const { data: activities, isLoading } = useUserActivities(user.productId);
+  const { data: activities, isLoading } = useUserActivities(user.appId);
   const userActivities = (activities ?? [])
     .filter((a) => a.userId === user.id)
     .slice(0, 5);
@@ -235,24 +266,26 @@ function ActivityPanel({ user }: { user: UserView }) {
 function UserRow({
   user,
   index,
-  productName,
+  appName,
 }: {
   user: UserView;
   index: number;
-  productName: string;
+  appName: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [confirmReject, setConfirmReject] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [editingRole, setEditingRole] = useState(false);
 
-  const suspend = useSuspendUser();
-  const restore = useRestoreUser();
+  const accept = useAcceptUser();
+  const reject = useRejectUser();
+  const hold = useHoldUser();
   const remove = useRemoveUser();
   const updateRole = useUpdateUserRole();
 
   const rk = roleKey(user.role);
-  const isSuspended = user.status === UserStatus.suspended;
+  const sk = statusKey(user.status);
+  const style = STATUS_STYLE[sk];
 
   return (
     <>
@@ -285,7 +318,7 @@ function UserRow({
           </div>
         </td>
 
-        {/* Product */}
+        {/* App */}
         <td className="px-5 py-3.5">
           <span
             className="text-[10px] font-mono px-2 py-0.5 rounded-full"
@@ -295,7 +328,7 @@ function UserRow({
               border: "1px solid rgba(91,157,255,0.2)",
             }}
           >
-            {productName}
+            {appName}
           </span>
         </td>
 
@@ -356,16 +389,12 @@ function UserRow({
           <span
             className="text-[10px] font-mono px-2 py-0.5 rounded-full"
             style={{
-              background: isSuspended
-                ? "rgba(239,68,68,0.1)"
-                : "rgba(52,211,153,0.12)",
-              color: isSuspended ? "#F87171" : "#34D399",
-              border: `1px solid ${
-                isSuspended ? "rgba(239,68,68,0.25)" : "rgba(52,211,153,0.25)"
-              }`,
+              background: style.bg,
+              color: style.color,
+              border: `1px solid ${style.border}`,
             }}
           >
-            {statusKey(user.status)}
+            {sk}
           </span>
         </td>
 
@@ -395,32 +424,50 @@ function UserRow({
           onKeyDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-end gap-1">
-            {isSuspended ? (
+            {sk !== "active" && (
               <button
                 type="button"
                 onClick={() => {
-                  restore.mutate(user.id, {
-                    onSuccess: () => toast.success(`${user.name} restored`),
-                    onError: () => toast.error("Failed to restore"),
+                  accept.mutate(user.id, {
+                    onSuccess: () => toast.success(`${user.name} accepted`),
+                    onError: () => toast.error("Failed to accept"),
                   });
                 }}
-                aria-label="Restore user"
-                data-ocid={`users.restore_button.${index}`}
+                aria-label="Accept user"
+                data-ocid={`users.accept_button.${index}`}
                 className="p-1.5 rounded-lg hover:bg-[rgba(52,211,153,0.1)] transition-colors"
-                title="Restore"
+                title="Accept"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
               </button>
-            ) : (
+            )}
+            {sk !== "held" && (
               <button
                 type="button"
-                onClick={() => setConfirmSuspend(true)}
-                aria-label="Suspend user"
-                data-ocid={`users.suspend_button.${index}`}
+                onClick={() => {
+                  hold.mutate(user.id, {
+                    onSuccess: () => toast.success(`${user.name} put on hold`),
+                    onError: () => toast.error("Failed to hold"),
+                  });
+                }}
+                aria-label="Hold user"
+                data-ocid={`users.hold_button.${index}`}
                 className="p-1.5 rounded-lg hover:bg-[rgba(251,191,36,0.1)] transition-colors"
-                title="Suspend"
+                title="Hold"
               >
-                <ShieldOff className="w-3.5 h-3.5 text-yellow-400" />
+                <Pause className="w-3.5 h-3.5 text-yellow-400" />
+              </button>
+            )}
+            {sk !== "rejected" && (
+              <button
+                type="button"
+                onClick={() => setConfirmReject(true)}
+                aria-label="Reject user"
+                data-ocid={`users.reject_button.${index}`}
+                className="p-1.5 rounded-lg hover:bg-[rgba(239,68,68,0.1)] transition-colors"
+                title="Reject"
+              >
+                <ShieldOff className="w-3.5 h-3.5 text-red-400" />
               </button>
             )}
             <button
@@ -439,25 +486,26 @@ function UserRow({
 
       {expanded && <ActivityPanel user={user} />}
 
-      {confirmSuspend && (
+      {confirmReject && (
         <ConfirmDialog
-          title={`Suspend ${user.name}?`}
-          body="This will prevent the user from accessing the product. You can restore them later."
+          title={`Reject ${user.name}?`}
+          body="This blocks the user from accessing the app. You can accept them again later."
+          danger
           onConfirm={() => {
-            suspend.mutate(user.id, {
-              onSuccess: () => toast.success(`${user.name} suspended`),
-              onError: () => toast.error("Failed to suspend"),
+            reject.mutate(user.id, {
+              onSuccess: () => toast.success(`${user.name} rejected`),
+              onError: () => toast.error("Failed to reject"),
             });
-            setConfirmSuspend(false);
+            setConfirmReject(false);
           }}
-          onCancel={() => setConfirmSuspend(false)}
+          onCancel={() => setConfirmReject(false)}
         />
       )}
 
       {confirmRemove && (
         <ConfirmDialog
           title={`Remove ${user.name}?`}
-          body="This action is permanent. The user will be removed from the product and all activity data will be lost."
+          body="This action is permanent. The user will be removed from the app and all activity data will be lost."
           danger
           onConfirm={() => {
             remove.mutate(user.id, {
@@ -476,22 +524,22 @@ function UserRow({
 // ── InviteModal ───────────────────────────────────────────────────────────────
 
 function InviteModal({ onClose }: { onClose: () => void }) {
-  const { data: products } = useProducts();
+  const { data: apps } = useApps();
   const createUser = useCreateUser();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("viewer");
-  const [productId, setProductId] = useState("");
+  const [appId, setAppId] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!productId) {
-      toast.error("Select a product first");
+    if (!appId) {
+      toast.error("Select an app first");
       return;
     }
     try {
       await createUser.mutateAsync({
-        productId: BigInt(productId),
+        appId,
         name,
         email,
         role: role as UserRole,
@@ -532,7 +580,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
                 Invite User
               </h2>
               <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)]">
-                Grant access to a connected product
+                Grant access to a connected app
               </p>
             </div>
           </div>
@@ -551,17 +599,17 @@ function InviteModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-widest">
-              Product
+              App
             </Label>
-            <Select value={productId} onValueChange={setProductId}>
+            <Select value={appId} onValueChange={setAppId}>
               <SelectTrigger
-                data-ocid="users.product.select"
+                data-ocid="users.app.select"
                 className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] focus:ring-[rgba(91,157,255,0.3)]"
               >
-                <SelectValue placeholder="Select product…" />
+                <SelectValue placeholder="Select app…" />
               </SelectTrigger>
               <SelectContent>
-                {products?.map((p) => (
+                {apps?.map((p) => (
                   <SelectItem key={p.id.toString()} value={p.id.toString()}>
                     {p.name}
                   </SelectItem>
@@ -701,17 +749,15 @@ function SkeletonRows() {
 export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterProduct, setFilterProduct] = useState("all");
+  const [filterApp, setFilterApp] = useState("all");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
   const { data: users, isLoading } = useUsers();
-  const { data: products } = useProducts();
+  const { data: apps } = useApps();
 
-  // Build a product name lookup
-  const productMap = new Map(
-    (products ?? []).map((p) => [p.id.toString(), p.name]),
-  );
+  // Build a app name lookup
+  const appMap = new Map((apps ?? []).map((p) => [p.id.toString(), p.name]));
 
   // Apply filters
   const filtered = (users ?? []).filter((u) => {
@@ -722,8 +768,7 @@ export default function UsersPage() {
       !u.email.toLowerCase().includes(q)
     )
       return false;
-    if (filterProduct !== "all" && u.productId.toString() !== filterProduct)
-      return false;
+    if (filterApp !== "all" && u.appId.toString() !== filterApp) return false;
     if (filterRole !== "all" && roleKey(u.role) !== filterRole) return false;
     if (filterStatus !== "all" && statusKey(u.status) !== filterStatus)
       return false;
@@ -766,7 +811,7 @@ export default function UsersPage() {
               )}
             </div>
             <p className="text-xs font-mono text-[rgba(232,232,255,0.35)] mt-0.5">
-              Manage users across all connected products
+              Manage users across all connected apps
             </p>
           </div>
         </div>
@@ -801,17 +846,17 @@ export default function UsersPage() {
           />
         </div>
 
-        {/* Product filter */}
-        <Select value={filterProduct} onValueChange={setFilterProduct}>
+        {/* App filter */}
+        <Select value={filterApp} onValueChange={setFilterApp}>
           <SelectTrigger
             className="w-40 h-8 text-xs bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.15)] text-[#E8E8FF]"
-            data-ocid="users.product_filter.select"
+            data-ocid="users.app_filter.select"
           >
-            <SelectValue placeholder="All Products" />
+            <SelectValue placeholder="All Apps" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Products</SelectItem>
-            {products?.map((p) => (
+            <SelectItem value="all">All Apps</SelectItem>
+            {apps?.map((p) => (
               <SelectItem key={p.id.toString()} value={p.id.toString()}>
                 {p.name}
               </SelectItem>
@@ -845,21 +890,23 @@ export default function UsersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="held">Held</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Active filter pills */}
         {(search ||
-          filterProduct !== "all" ||
+          filterApp !== "all" ||
           filterRole !== "all" ||
           filterStatus !== "all") && (
           <button
             type="button"
             onClick={() => {
               setSearch("");
-              setFilterProduct("all");
+              setFilterApp("all");
               setFilterRole("all");
               setFilterStatus("all");
             }}
@@ -905,9 +952,7 @@ export default function UsersPage() {
                   key={user.id.toString()}
                   user={user}
                   index={i + 1}
-                  productName={
-                    productMap.get(user.productId.toString()) ?? "Unknown"
-                  }
+                  appName={appMap.get(user.appId.toString()) ?? "Unknown"}
                 />
               ))}
             </tbody>
@@ -925,7 +970,7 @@ export default function UsersPage() {
 function TableHead() {
   const cols = [
     "User",
-    "Product",
+    "App",
     "Role",
     "Status",
     "Last Activity",
@@ -985,7 +1030,7 @@ function EmptyState({
         <p className="text-xs font-mono text-[rgba(232,232,255,0.28)] mt-1">
           {hasUsers
             ? "Try adjusting your search or filter criteria."
-            : "Invite a user to a connected product to get started."}
+            : "Invite a user to a connected app to get started."}
         </p>
       </div>
       {!hasUsers && (

@@ -300,12 +300,12 @@ function NotificationRow({
                 />
                 {typeLabel(notification.notifType)}
               </Badge>
-              {notification.productId !== undefined && (
+              {notification.appId !== null && (
                 <Badge
                   variant="outline"
                   className="text-[10px] px-1.5 py-0 border border-violet-400/30 bg-violet-400/10 text-violet-300"
                 >
-                  #{notification.productId.toString()}
+                  #{notification.appId}
                 </Badge>
               )}
               {isSnoozed && (
@@ -418,7 +418,7 @@ function EmptyState({ tab }: { tab: TabKey }) {
       all: {
         icon: "🔔",
         title: "No notifications yet",
-        sub: "When products send alerts or events, they'll appear here.",
+        sub: "When apps send alerts or events, they'll appear here.",
       },
       unread: {
         icon: "✅",

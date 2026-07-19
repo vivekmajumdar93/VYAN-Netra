@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useActiveAlerts,
-  useDisconnectProduct,
+  useApps,
   useIssues,
   useNotifications,
-  useProducts,
-  useSyncProduct,
   useUsers,
 } from "@/hooks/use-backend";
-import { IssueStatus, NotificationSeverity, ProductStatus } from "@/types";
+import { AppStatus, IssueStatus, NotificationSeverity } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Activity,
@@ -19,11 +17,10 @@ import {
   Bell,
   CheckCircle2,
   FilePlus,
-  Package,
+  Layers,
   RefreshCw,
   Settings,
   Shield,
-  Unplug,
   UserPlus,
   Users,
   XCircle,
@@ -131,7 +128,7 @@ const SKELETON_KEYS_ACTIVITY = ["h", "i", "j", "k"] as const;
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  const { data: products, isLoading: loadingProducts } = useProducts();
+  const { data: apps, isLoading: loadingApps } = useApps();
   const { data: users, isLoading: loadingUsers } = useUsers();
   const { data: alerts, isLoading: loadingAlerts } = useActiveAlerts();
   const { data: notifications, isLoading: loadingNotifs } = useNotifications(
@@ -144,19 +141,16 @@ export default function DashboardPage() {
     IssueStatus.open,
   );
 
-  const syncProduct = useSyncProduct();
-  const disconnectProduct = useDisconnectProduct();
-
   const connectedCount =
-    products?.filter((p) => p.status === ProductStatus.connected).length ?? 0;
-  const totalProducts = products?.length ?? 0;
+    apps?.filter((a) => a.status === AppStatus.connected).length ?? 0;
+  const totalApps = apps?.length ?? 0;
   const totalUsers = users?.length ?? 0;
   const activeAlerts = alerts?.length ?? 0;
   const unreadNotifs = notifications?.filter((n) => !n.isRead).length ?? 0;
   const openIssues = issues?.length ?? 0;
 
   const isLoadingAny =
-    loadingProducts ||
+    loadingApps ||
     loadingUsers ||
     loadingAlerts ||
     loadingNotifs ||
@@ -175,34 +169,20 @@ export default function DashboardPage() {
 
   const recentNotifs = (notifications ?? []).slice(0, 5);
 
-  function handleSync(id: bigint, name: string) {
-    syncProduct.mutate(id, {
-      onSuccess: () => toast.success(`Synced ${name}`),
-      onError: () => toast.error(`Sync failed for ${name}`),
-    });
-  }
-
-  function handleDisconnect(id: bigint, name: string) {
-    disconnectProduct.mutate(id, {
-      onSuccess: () => toast.success(`${name} disconnected`),
-      onError: () => toast.error(`Failed to disconnect ${name}`),
-    });
-  }
-
   const stats = [
     {
-      icon: Package,
-      label: "Products",
-      value: totalProducts,
+      icon: Layers,
+      label: "Apps",
+      value: totalApps,
       sub: `${connectedCount} connected`,
       accentColor: "#5B9DFF",
-      loading: loadingProducts,
+      loading: loadingApps,
     },
     {
       icon: Users,
       label: "Total Users",
       value: totalUsers,
-      sub: "across all products",
+      sub: "across all apps",
       accentColor: "#A855F7",
       loading: loadingUsers,
     },
@@ -250,12 +230,12 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
-      icon: Package,
-      label: "Register Product",
-      desc: "Add a new app via 6-digit code",
+      icon: Layers,
+      label: "Register App",
+      desc: "Generate a pairing code for a new app",
       accentColor: "#5B9DFF",
-      path: "/products",
-      ocid: "dashboard.quick_action.register_product",
+      path: "/apps",
+      ocid: "dashboard.quick_action.register_app",
     },
     {
       icon: UserPlus,
@@ -399,68 +379,70 @@ export default function DashboardPage() {
               />
               <HealthPill
                 label="Connected"
-                value={`${connectedCount}/${totalProducts}`}
+                value={`${connectedCount}/${totalApps}`}
                 color="#5B9DFF"
-                Icon={Package}
+                Icon={Layers}
               />
             </>
           )}
         </div>
       </section>
 
-      {/* ── Connected Products Grid + Recent Activity (2-col) ── */}
+      {/* ── Apps Grid + Recent Activity (2-col) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Connected Products */}
-        <section data-ocid="dashboard.products.section">
+        {/* Apps */}
+        <section data-ocid="dashboard.apps.section">
           <div className="flex items-center justify-between mb-4">
-            <SectionLabel>Connected Products</SectionLabel>
+            <SectionLabel>Apps</SectionLabel>
             <Button
               variant="ghost"
               size="sm"
               className="text-xs font-mono text-[rgba(91,157,255,0.7)] hover:text-[#5B9DFF] -mt-4"
-              onClick={() => navigate({ to: "/products" })}
-              data-ocid="dashboard.products.view_all_button"
+              onClick={() => navigate({ to: "/apps" })}
+              data-ocid="dashboard.apps.view_all_button"
             >
               View all →
             </Button>
           </div>
 
-          {loadingProducts ? (
+          {loadingApps ? (
             <div className="space-y-3">
               {SKELETON_KEYS_PRODUCTS.map((k) => (
                 <Skeleton key={k} className="h-20 w-full rounded-xl" />
               ))}
             </div>
-          ) : !products || products.length === 0 ? (
+          ) : !apps || apps.length === 0 ? (
             <div
               className="glass-card rounded-xl p-10 flex flex-col items-center justify-center gap-3"
-              data-ocid="dashboard.products.empty_state"
+              data-ocid="dashboard.apps.empty_state"
             >
-              <Package className="w-10 h-10 text-[rgba(91,157,255,0.35)]" />
+              <Layers className="w-10 h-10 text-[rgba(91,157,255,0.35)]" />
               <p className="text-sm text-[rgba(232,232,255,0.45)] font-mono text-center">
-                No products registered yet.
+                No apps registered yet.
                 <br />
-                Use a 6-digit code to connect a product.
+                Generate a pairing code to connect one.
               </p>
               <Button
                 size="sm"
                 variant="outline"
                 className="mt-2 border-[rgba(91,157,255,0.3)] text-[rgba(91,157,255,0.8)]"
-                onClick={() => navigate({ to: "/products" })}
-                data-ocid="dashboard.products.register_button"
+                onClick={() => navigate({ to: "/apps" })}
+                data-ocid="dashboard.apps.register_button"
               >
-                Register Product
+                Register App
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
-              {products.slice(0, 6).map((product, i) => {
-                const isConnected = product.status === ProductStatus.connected;
+              {apps.slice(0, 6).map((app, i) => {
+                const isConnected = app.status === AppStatus.connected;
                 return (
-                  <div
-                    key={product.id.toString()}
-                    className="glass-card rounded-xl px-4 py-3.5 flex items-center gap-3 group"
-                    data-ocid={`dashboard.product.item.${i + 1}`}
+                  <button
+                    key={app.id}
+                    type="button"
+                    className="w-full glass-card rounded-xl px-4 py-3.5 flex items-center gap-3 group cursor-pointer text-left"
+                    onClick={() => navigate({ to: "/apps" })}
+                    data-ocid={`dashboard.app.item.${i + 1}`}
                   >
                     {/* Status dot */}
                     <div
@@ -476,15 +458,15 @@ export default function DashboardPage() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-body font-semibold text-[#E8E8FF] truncate">
-                        {product.name}
+                        {app.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] tracking-widest">
-                          {product.code}
+                          {app.appCode}
                         </span>
-                        {product.lastSync[0] ? (
+                        {app.lastHeartbeat[0] ? (
                           <span className="text-[10px] font-mono text-[rgba(232,232,255,0.25)]">
-                            · synced {formatTime(product.lastSync[0])}
+                            · heartbeat {formatTime(app.lastHeartbeat[0])}
                           </span>
                         ) : null}
                       </div>
@@ -501,49 +483,9 @@ export default function DashboardPage() {
                         border: `1px solid ${isConnected ? "rgba(52,211,153,0.22)" : "rgba(107,114,128,0.18)"}`,
                       }}
                     >
-                      {isConnected ? "connected" : "offline"}
+                      {app.status}
                     </span>
-
-                    {/* Action buttons */}
-                    <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-smooth">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="w-7 h-7"
-                        title="Sync"
-                        disabled={syncProduct.isPending}
-                        onClick={() => handleSync(product.id, product.name)}
-                        data-ocid={`dashboard.product.sync_button.${i + 1}`}
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 text-[rgba(91,157,255,0.7)]" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="w-7 h-7"
-                        title="View"
-                        onClick={() => navigate({ to: "/products" })}
-                        data-ocid={`dashboard.product.view_button.${i + 1}`}
-                      >
-                        <Package className="w-3.5 h-3.5 text-[rgba(232,232,255,0.4)]" />
-                      </Button>
-                      {isConnected && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="w-7 h-7"
-                          title="Disconnect"
-                          disabled={disconnectProduct.isPending}
-                          onClick={() =>
-                            handleDisconnect(product.id, product.name)
-                          }
-                          data-ocid={`dashboard.product.disconnect_button.${i + 1}`}
-                        >
-                          <Unplug className="w-3.5 h-3.5 text-[rgba(239,68,68,0.6)]" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

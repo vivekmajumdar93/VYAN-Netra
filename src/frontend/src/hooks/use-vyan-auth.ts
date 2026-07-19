@@ -22,13 +22,23 @@ const RECOGNIZED_ADMINS: Record<string, VyanUser> = {
 
 export { RECOGNIZED_ADMINS };
 
+export function findRecognizedAdmin(email: string): VyanUser | null {
+  const normalized = email.trim().toLowerCase();
+  return (
+    RECOGNIZED_ADMINS[normalized] ?? RECOGNIZED_ADMINS[email.trim()] ?? null
+  );
+}
+
 const STORAGE_KEY = "vyan_netra_user";
 
 export function loadStoredUser(): VyanUser | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as VyanUser;
+    const parsed = JSON.parse(raw) as VyanUser;
+    // Re-verify against the allowlist on every load — a tampered or stale
+    // localStorage entry should never grant access on its own.
+    return findRecognizedAdmin(parsed.email);
   } catch {
     return null;
   }
@@ -51,23 +61,17 @@ export function clearStoredUser() {
 }
 
 export interface VyanAuthContextValue {
-  /** Always true — direct admin access. Firebase auth will replace this. */
   isAuthenticated: boolean;
   currentUser: VyanUser | null;
-  login: (email: string) => void;
+  /** Returns false (and does not authenticate) for any email not on the admin allowlist. */
+  login: (email: string) => boolean;
   logout: () => void;
 }
 
-const DEFAULT_USER: VyanUser = {
-  email: "admin@vyan.com",
-  name: "VYAN Admin",
-  role: "Super Admin",
-};
-
 export const VyanAuthContext = createContext<VyanAuthContextValue>({
-  isAuthenticated: true,
-  currentUser: DEFAULT_USER,
-  login: () => {},
+  isAuthenticated: false,
+  currentUser: null,
+  login: () => false,
   logout: () => {},
 });
 

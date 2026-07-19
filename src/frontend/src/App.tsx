@@ -1,4 +1,6 @@
 import Layout from "@/components/Layout";
+import { useVyanAuth } from "@/hooks/use-vyan-auth";
+import LoginPage from "@/pages/LoginPage";
 import {
   Outlet,
   RouterProvider,
@@ -10,7 +12,7 @@ import {
 import { Suspense, lazy } from "react";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
+const AppsPage = lazy(() => import("@/pages/AppsPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const MonitoringPage = lazy(() => import("@/pages/MonitoringPage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
@@ -18,15 +20,14 @@ const IssuesPage = lazy(() => import("@/pages/IssuesPage"));
 const UpdatesPage = lazy(() => import("@/pages/UpdatesPage"));
 const EmailPage = lazy(() => import("@/pages/EmailPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const LinkedAppsPage = lazy(() => import("@/pages/LinkedAppsPage"));
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Dashboard", subtitle: "VYAN Netra Command Center" },
-  "/products": {
-    title: "Products",
-    subtitle: "Manage connected apps & platforms",
+  "/apps": {
+    title: "Apps",
+    subtitle: "Register, connect, and control every VYAN app",
   },
-  "/users": { title: "Users", subtitle: "User management across products" },
+  "/users": { title: "Users", subtitle: "User management across apps" },
   "/monitoring": {
     title: "Monitoring",
     subtitle: "Real-time system health & alerts",
@@ -38,14 +39,10 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/issues": { title: "Issues", subtitle: "Track and resolve platform issues" },
   "/updates": {
     title: "Updates",
-    subtitle: "Deploy & schedule product updates",
+    subtitle: "Deploy & schedule app updates",
   },
-  "/email": { title: "Email", subtitle: "Email configs, templates & logs" },
+  "/email": { title: "Email", subtitle: "Compose and send to any app's users" },
   "/settings": { title: "Settings", subtitle: "Console configuration" },
-  "/linked-apps": {
-    title: "Linked Applications",
-    subtitle: "Connect & manage VYAN ecosystem apps",
-  },
 };
 
 function AppShell() {
@@ -73,10 +70,10 @@ const dashboardRoute = createRoute({
   path: "/",
   component: DashboardPage,
 });
-const productsRoute = createRoute({
+const appsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/products",
-  component: ProductsPage,
+  path: "/apps",
+  component: AppsPage,
 });
 const usersRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -113,15 +110,9 @@ const settingsRoute = createRoute({
   path: "/settings",
   component: SettingsPage,
 });
-const linkedAppsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/linked-apps",
-  component: LinkedAppsPage,
-});
-
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
-  productsRoute,
+  appsRoute,
   usersRoute,
   monitoringRoute,
   notificationsRoute,
@@ -129,7 +120,6 @@ const routeTree = rootRoute.addChildren([
   updatesRoute,
   emailRoute,
   settingsRoute,
-  linkedAppsRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -141,5 +131,7 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
+  const { isAuthenticated } = useVyanAuth();
+  if (!isAuthenticated) return <LoginPage />;
   return <RouterProvider router={router} />;
 }

@@ -1,13 +1,33 @@
-import { createActor } from "@/backend";
-import type {
-  ActivityEventType,
-  EmailStatus,
-  IssueSeverity,
-  IssueStatus,
-  NotificationSeverity,
-  NotificationType,
-  Time,
-  UserRole,
+import {
+  type ActivityEventType,
+  type AlertView,
+  type AppStatus,
+  type AppView,
+  type EmailConfigView,
+  type EmailLog,
+  type EmailStatus,
+  type EmailTemplateView,
+  type IssueComment,
+  type IssueSeverity,
+  type IssueStatus,
+  type IssueView,
+  type NotificationSeverity,
+  type NotificationType,
+  type NotificationView,
+  type SystemMetrics,
+  type Time,
+  type UpdateStatus,
+  type UpdateView,
+  type UserActivity,
+  type UserRole,
+  type UserStatus,
+  type UserView,
+  type ZohoStatusView,
+  createActor,
+  fromOpt,
+  fromVariant,
+  toOpt,
+  toVariant,
 } from "@/backend";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,96 +37,198 @@ function useBackendActor() {
   return useActor(createActor);
 }
 
-// ── Products ──────────────────────────────────────────────────────────────────
-export function useProducts() {
+// ── UI-friendly view types (variant fields converted to string enums) ──────
+export type AppViewUI = Omit<AppView, "status" | "baseUrl"> & {
+  status: AppStatus;
+  baseUrl: string | null;
+};
+export type UserViewUI = Omit<UserView, "role" | "status"> & {
+  role: UserRole;
+  status: UserStatus;
+};
+export type AlertViewUI = Omit<AlertView, "severity"> & { severity: string };
+export type IssueViewUI = Omit<
+  IssueView,
+  "severity" | "status" | "assignedTo"
+> & {
+  severity: IssueSeverity;
+  status: IssueStatus;
+  assignedTo: bigint | null;
+};
+export type UpdateViewUI = Omit<
+  UpdateView,
+  "status" | "scheduledAt" | "deployedAt"
+> & {
+  status: UpdateStatus;
+  scheduledAt: bigint | null;
+  deployedAt: bigint | null;
+};
+export type NotificationViewUI = Omit<
+  NotificationView,
+  "severity" | "notifType" | "appId"
+> & {
+  severity: NotificationSeverity;
+  notifType: NotificationType;
+  appId: string | null;
+};
+export type EmailLogUI = Omit<EmailLog, "status"> & { status: EmailStatus };
+export type UserActivityUI = Omit<UserActivity, "eventType"> & {
+  eventType: ActivityEventType;
+};
+
+const mapApp = (a: AppView): AppViewUI => ({
+  ...a,
+  status: fromVariant<AppStatus>(a.status as unknown as Record<string, null>),
+  baseUrl: fromOpt(a.baseUrl),
+});
+const mapUser = (u: UserView): UserViewUI => ({
+  ...u,
+  role: fromVariant<UserRole>(u.role as unknown as Record<string, null>),
+  status: fromVariant<UserStatus>(u.status as unknown as Record<string, null>),
+});
+const mapAlert = (a: AlertView): AlertViewUI => ({
+  ...a,
+  severity: fromVariant(a.severity as unknown as Record<string, null>),
+});
+const mapIssue = (i: IssueView): IssueViewUI => ({
+  ...i,
+  severity: fromVariant<IssueSeverity>(
+    i.severity as unknown as Record<string, null>,
+  ),
+  status: fromVariant<IssueStatus>(i.status as unknown as Record<string, null>),
+  assignedTo: fromOpt(i.assignedTo),
+});
+const mapUpdate = (u: UpdateView): UpdateViewUI => ({
+  ...u,
+  status: fromVariant<UpdateStatus>(
+    u.status as unknown as Record<string, null>,
+  ),
+  scheduledAt: fromOpt(u.scheduledAt),
+  deployedAt: fromOpt(u.deployedAt),
+});
+const mapNotification = (n: NotificationView): NotificationViewUI => ({
+  ...n,
+  severity: fromVariant<NotificationSeverity>(
+    n.severity as unknown as Record<string, null>,
+  ),
+  notifType: fromVariant<NotificationType>(
+    n.notifType as unknown as Record<string, null>,
+  ),
+  appId: fromOpt(n.appId),
+});
+const mapEmailLog = (l: EmailLog): EmailLogUI => ({
+  ...l,
+  status: fromVariant<EmailStatus>(l.status as unknown as Record<string, null>),
+});
+const mapActivity = (a: UserActivity): UserActivityUI => ({
+  ...a,
+  eventType: fromVariant<ActivityEventType>(
+    a.eventType as unknown as Record<string, null>,
+  ),
+});
+
+// ── Apps ─────────────────────────────────────────────────────────────────────
+export function useApps() {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["products"],
+    queryKey: ["apps"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listProducts();
+      return (await actor.listApps()).map(mapApp);
     },
     enabled: !!actor && !isFetching,
+    refetchInterval: 30_000,
   });
 }
 
-export function useProduct(id: bigint) {
+export function useApp(id: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["product", id.toString()],
+    queryKey: ["app", id],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getProduct(id);
+      const result = await actor.getApp(id);
+      const view = fromOpt(result);
+      return view ? mapApp(view) : null;
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useRegisterProduct() {
+export function useCreateApp() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: {
-      name: string;
-      description: string;
-      code: string;
-    }) => {
+    mutationFn: async (name: string) => {
       if (!actor) throw new Error("Not connected");
-      return actor.registerProduct(args.name, args.description, args.code);
+      return mapApp(await actor.createApp(name));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }
 
-export function useDisconnectProduct() {
+export function useSetAppBaseUrl() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: bigint) => {
+    mutationFn: async (args: { id: string; baseUrl: string }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.disconnectProduct(id);
+      return mapApp(await actor.setAppBaseUrl(args.id, args.baseUrl));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }
 
-export function useReconnectProduct() {
+export function useRenameApp() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: bigint) => {
+    mutationFn: async (args: { id: string; name: string }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.reconnectProduct(id);
+      return mapApp(await actor.renameApp(args.id, args.name));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }
 
-export function useUpdateProductMeta() {
+export function useSetAppManualStatus() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: {
-      id: bigint;
-      name: string;
-      description: string;
-    }) => {
+    mutationFn: async (args: { id: string; status: AppStatus }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.updateProductMeta(args.id, args.name, args.description);
+      return mapApp(
+        await actor.setAppManualStatus(
+          args.id,
+          toVariant(args.status) as never,
+        ),
+      );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }
 
-export function useSyncProduct() {
+export function useRegenerateAppCode() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: bigint) => {
+    mutationFn: async (id: string) => {
       if (!actor) throw new Error("Not connected");
-      return actor.syncProduct(id);
+      return mapApp(await actor.regenerateAppCode(id));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
+  });
+}
+
+export function useRemoveApp() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.removeApp(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }
 
@@ -117,21 +239,34 @@ export function useUsers() {
     queryKey: ["users"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listUsers();
+      return (await actor.listUsers()).map(mapUser);
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useUsersByProduct(productId: bigint) {
+export function useUsersByApp(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["users", "product", productId.toString()],
+    queryKey: ["users", "app", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listUsersByProduct(productId);
+      return (await actor.listUsersByApp(appId)).map(mapUser);
+    },
+    enabled: !!actor && !isFetching && !!appId,
+  });
+}
+
+export function usePendingUsers() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["users", "pending"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (await actor.listPendingUsers()).map(mapUser);
     },
     enabled: !!actor && !isFetching,
+    refetchInterval: 30_000,
   });
 }
 
@@ -140,13 +275,20 @@ export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      productId: bigint;
+      appId: string;
       name: string;
       email: string;
       role: UserRole;
     }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.createUser(args.productId, args.name, args.email, args.role);
+      return mapUser(
+        await actor.createUser(
+          args.appId,
+          args.name,
+          args.email,
+          toVariant(args.role) as never,
+        ),
+      );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
@@ -158,31 +300,43 @@ export function useUpdateUserRole() {
   return useMutation({
     mutationFn: async (args: { id: bigint; role: UserRole }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.updateUserRole(args.id, args.role);
+      return actor.updateUserRole(args.id, toVariant(args.role) as never);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
 
-export function useSuspendUser() {
+export function useAcceptUser() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error("Not connected");
-      return actor.suspendUser(id);
+      return actor.acceptUser(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
 
-export function useRestoreUser() {
+export function useRejectUser() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error("Not connected");
-      return actor.restoreUser(id);
+      return actor.rejectUser(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useHoldUser() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.holdUser(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
@@ -200,15 +354,15 @@ export function useRemoveUser() {
   });
 }
 
-export function useUserActivities(productId: bigint) {
+export function useUserActivities(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["user-activities", productId.toString()],
+    queryKey: ["user-activities", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listUserActivities(productId);
+      return (await actor.listUserActivities(appId)).map(mapActivity);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
@@ -218,15 +372,15 @@ export function useLogUserActivity() {
   return useMutation({
     mutationFn: async (args: {
       userId: bigint;
-      productId: bigint;
+      appId: string;
       eventType: ActivityEventType;
       description: string;
     }) => {
       if (!actor) throw new Error("Not connected");
       return actor.logUserActivity(
         args.userId,
-        args.productId,
-        args.eventType,
+        args.appId,
+        toVariant(args.eventType) as never,
         args.description,
       );
     },
@@ -235,28 +389,28 @@ export function useLogUserActivity() {
 }
 
 // ── Monitoring ────────────────────────────────────────────────────────────────
-export function useLatestMetrics(productId: bigint) {
+export function useLatestMetrics(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["metrics-latest", productId.toString()],
+    queryKey: ["metrics-latest", appId],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getLatestMetrics(productId);
+      return fromOpt(await actor.getLatestMetrics(appId));
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
     refetchInterval: 30_000,
   });
 }
 
-export function useMetricsHistory(productId: bigint) {
+export function useMetricsHistory(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["metrics-history", productId.toString()],
+    queryKey: ["metrics-history", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getMetricsHistory(productId);
+      return actor.getMetricsHistory(appId);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
     refetchInterval: 60_000,
   });
 }
@@ -266,7 +420,7 @@ export function useSubmitMetrics() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      productId: bigint;
+      appId: string;
       cpu: bigint;
       memory: bigint;
       disk: bigint;
@@ -276,7 +430,7 @@ export function useSubmitMetrics() {
     }) => {
       if (!actor) throw new Error("Not connected");
       return actor.submitMetrics(
-        args.productId,
+        args.appId,
         args.cpu,
         args.memory,
         args.disk,
@@ -286,9 +440,7 @@ export function useSubmitMetrics() {
       );
     },
     onSuccess: (_, vars) =>
-      qc.invalidateQueries({
-        queryKey: ["metrics-latest", vars.productId.toString()],
-      }),
+      qc.invalidateQueries({ queryKey: ["metrics-latest", vars.appId] }),
   });
 }
 
@@ -298,22 +450,22 @@ export function useActiveAlerts() {
     queryKey: ["alerts-active"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listActiveAlerts();
+      return (await actor.listActiveAlerts()).map(mapAlert);
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 30_000,
   });
 }
 
-export function useAlertHistory(productId: bigint) {
+export function useAlertHistory(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["alerts-history", productId.toString()],
+    queryKey: ["alerts-history", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listAlertHistory(productId);
+      return (await actor.listAlertHistory(appId)).map(mapAlert);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
@@ -332,19 +484,20 @@ export function useResolveAlert() {
 // ── Notifications ─────────────────────────────────────────────────────────────
 export function useNotifications(
   notifType?: NotificationType | null,
-  productId?: bigint | null,
+  appId?: string | null,
   isRead?: boolean | null,
 ) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["notifications", notifType, productId?.toString(), isRead],
+    queryKey: ["notifications", notifType, appId, isRead],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listNotifications(
-        notifType ?? null,
-        productId ?? null,
-        isRead ?? null,
+      const result = await actor.listNotifications(
+        notifType ? (toOpt(toVariant(notifType)) as never) : [],
+        toOpt(appId ?? null),
+        toOpt(isRead ?? null),
       );
+      return result.map(mapNotification);
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 20_000,
@@ -408,15 +561,17 @@ export function useCreateNotification() {
       body: string;
       severity: NotificationSeverity;
       notifType: NotificationType;
-      productId?: bigint;
+      appId?: string;
     }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.createNotification(
-        args.title,
-        args.body,
-        args.severity,
-        args.notifType,
-        args.productId ?? null,
+      return mapNotification(
+        await actor.createNotification(
+          args.title,
+          args.body,
+          toVariant(args.severity) as never,
+          toVariant(args.notifType) as never,
+          toOpt(args.appId ?? null),
+        ),
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
@@ -425,20 +580,21 @@ export function useCreateNotification() {
 
 // ── Issues ────────────────────────────────────────────────────────────────────
 export function useIssues(
-  productId?: bigint | null,
+  appId?: string | null,
   status?: IssueStatus | null,
   severity?: IssueSeverity | null,
 ) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["issues", productId?.toString(), status, severity],
+    queryKey: ["issues", appId, status, severity],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listIssues(
-        productId ?? null,
-        status ?? null,
-        severity ?? null,
+      const result = await actor.listIssues(
+        toOpt(appId ?? null),
+        status ? (toOpt(toVariant(status)) as never) : [],
+        severity ? (toOpt(toVariant(severity)) as never) : [],
       );
+      return result.map(mapIssue);
     },
     enabled: !!actor && !isFetching,
   });
@@ -452,16 +608,18 @@ export function useCreateIssue() {
       title: string;
       description: string;
       severity: IssueSeverity;
-      productId: bigint;
+      appId: string;
       assignedTo?: bigint;
     }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.createIssue(
-        args.title,
-        args.description,
-        args.severity,
-        args.productId,
-        args.assignedTo ?? null,
+      return mapIssue(
+        await actor.createIssue(
+          args.title,
+          args.description,
+          toVariant(args.severity) as never,
+          args.appId,
+          toOpt(args.assignedTo ?? null),
+        ),
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["issues"] }),
@@ -497,9 +655,9 @@ export function useUpdateIssue() {
         args.id,
         args.title,
         args.description,
-        args.severity,
-        args.status,
-        args.assignedTo ?? null,
+        toVariant(args.severity) as never,
+        toVariant(args.status) as never,
+        toOpt(args.assignedTo ?? null),
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["issues"] }),
@@ -544,21 +702,21 @@ export function useAllUpdates() {
     queryKey: ["updates-all"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listAllUpdates();
+      return (await actor.listAllUpdates()).map(mapUpdate);
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useProductUpdates(productId: bigint) {
+export function useAppUpdates(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["updates", productId.toString()],
+    queryKey: ["updates", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listProductUpdates(productId);
+      return (await actor.listAppUpdates(appId)).map(mapUpdate);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
@@ -567,17 +725,19 @@ export function useCreateUpdate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      productId: bigint;
+      appId: string;
       version: string;
       releaseNotes: string;
       size: bigint;
     }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.createUpdate(
-        args.productId,
-        args.version,
-        args.releaseNotes,
-        args.size,
+      return mapUpdate(
+        await actor.createUpdate(
+          args.appId,
+          args.version,
+          args.releaseNotes,
+          args.size,
+        ),
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["updates-all"] }),
@@ -609,39 +769,39 @@ export function useScheduleUpdate() {
 }
 
 // ── Email ─────────────────────────────────────────────────────────────────────
-export function useEmailConfigs(productId: bigint) {
+export function useEmailConfigs(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["email-configs", productId.toString()],
+    queryKey: ["email-configs", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listEmailConfigs(productId);
+      return actor.listEmailConfigs(appId);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
-export function useEmailTemplates(productId: bigint) {
+export function useEmailTemplates(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["email-templates", productId.toString()],
+    queryKey: ["email-templates", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listEmailTemplates(productId);
+      return actor.listEmailTemplates(appId);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
-export function useEmailLogs(productId: bigint) {
+export function useEmailLogs(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
-    queryKey: ["email-logs", productId.toString()],
+    queryKey: ["email-logs", appId],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listEmailLogs(productId);
+      return (await actor.listEmailLogs(appId)).map(mapEmailLog);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!appId,
   });
 }
 
@@ -650,14 +810,14 @@ export function useCreateEmailConfig() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      productId: bigint;
+      appId: string;
       senderName: string;
       senderEmail: string;
       bounceEmail: string;
     }) => {
       if (!actor) throw new Error("Not connected");
       return actor.createEmailConfig(
-        args.productId,
+        args.appId,
         args.senderName,
         args.senderEmail,
         args.bounceEmail,
@@ -696,14 +856,14 @@ export function useCreateEmailTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      productId: bigint;
+      appId: string;
       name: string;
       subject: string;
       body: string;
     }) => {
       if (!actor) throw new Error("Not connected");
       return actor.createEmailTemplate(
-        args.productId,
+        args.appId,
         args.name,
         args.subject,
         args.body,
@@ -725,77 +885,87 @@ export function useUpdateEmailTemplate() {
   });
 }
 
-export function useAddEmailLog() {
-  const { actor } = useBackendActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (args: {
-      productId: bigint;
-      recipient: string;
-      subject: string;
-      status: EmailStatus;
-    }) => {
-      if (!actor) throw new Error("Not connected");
-      return actor.addEmailLog(
-        args.productId,
-        args.recipient,
-        args.subject,
-        args.status,
-      );
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["email-logs"] }),
-  });
-}
-
-// ── Linked Apps ──────────────────────────────────────────────────────────────
-export function useLinkedAppsList() {
+export function useZohoStatus() {
   const { actor, isFetching } = useBackendActor();
-  return useQuery({
-    queryKey: ["linked-apps"],
+  return useQuery<ZohoStatusView>({
+    queryKey: ["zoho-status"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.listLinkedApps();
+      if (!actor) return { configured: false, accountId: "", fromAddress: "" };
+      return actor.getZohoStatus();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useRegisterLinkedAppMutation() {
+export function useSetZohoConfig() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
-      name: string;
-      baseUrl: string;
-      appCode: string;
+      accountId: string;
+      accessToken: string;
+      fromAddress: string;
     }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.registerLinkedApp(args.name, args.baseUrl, args.appCode);
+      return actor.setZohoConfig(
+        args.accountId,
+        args.accessToken,
+        args.fromAddress,
+      );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["linked-apps"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["zoho-status"] }),
   });
 }
 
-export function useUpdateLinkedAppStatusMutation() {
+// Sends to one recipient and logs the real (not simulated) result.
+export function useSendEmailNow() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { id: string; status: string }) => {
+    mutationFn: async (args: {
+      appId: string;
+      recipient: string;
+      subject: string;
+      body: string;
+    }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.updateLinkedAppStatus(args.id, args.status);
+      return mapEmailLog(
+        await actor.sendEmailNow(
+          args.appId,
+          args.recipient,
+          args.subject,
+          args.body,
+        ),
+      );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["linked-apps"] }),
+    onSuccess: (_, vars) =>
+      qc.invalidateQueries({ queryKey: ["email-logs", vars.appId] }),
   });
 }
 
-export function useRemoveLinkedAppMutation() {
+// Sends to a batch of recipients (e.g. every accepted user of an app, or a
+// hand-picked selection), one at a time so a single failure doesn't drop
+// the rest. Returns one real log entry per recipient.
+export function useSendEmailBatch() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (args: {
+      appId: string;
+      recipients: string[];
+      subject: string;
+      body: string;
+    }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.removeLinkedApp(id);
+      const logs = await actor.sendEmailBatch(
+        args.appId,
+        args.recipients,
+        args.subject,
+        args.body,
+      );
+      return logs.map(mapEmailLog);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["linked-apps"] }),
+    onSuccess: (_, vars) =>
+      qc.invalidateQueries({ queryKey: ["email-logs", vars.appId] }),
   });
 }

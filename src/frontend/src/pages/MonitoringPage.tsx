@@ -1,4 +1,4 @@
-import type { AlertView, ProductView, SystemMetrics } from "@/backend";
+import type { SystemMetrics } from "@/backend";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import {
   useActiveAlerts,
   useAlertHistory,
+  useApps,
   useLatestMetrics,
   useMetricsHistory,
-  useProducts,
   useResolveAlert,
   useSubmitMetrics,
 } from "@/hooks/use-backend";
+import type { AlertView, AppView } from "@/types";
 import { MetricSeverity } from "@/types";
 import {
   Activity,
@@ -221,10 +222,10 @@ const DEFAULT_FORM: FormState = {
 };
 
 function SubmitMetricsModal({
-  product,
+  app,
   open,
   onClose,
-}: { product: ProductView; open: boolean; onClose: () => void }) {
+}: { app: AppView; open: boolean; onClose: () => void }) {
   const submit = useSubmitMetrics();
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
 
@@ -236,7 +237,7 @@ function SubmitMetricsModal({
     e.preventDefault();
     submit.mutate(
       {
-        productId: product.id,
+        appId: app.id,
         cpu: BigInt(form.cpu || "0"),
         memory: BigInt(form.memory || "0"),
         disk: BigInt(form.disk || "0"),
@@ -246,7 +247,7 @@ function SubmitMetricsModal({
       },
       {
         onSuccess: () => {
-          toast.success(`Metrics submitted for ${product.name}`);
+          toast.success(`Metrics submitted for ${app.name}`);
           onClose();
         },
         onError: () => toast.error("Failed to submit metrics"),
@@ -279,7 +280,7 @@ function SubmitMetricsModal({
       >
         <DialogHeader>
           <DialogTitle className="text-sm font-display font-semibold text-[#E8E8FF]">
-            Submit Test Metrics — {product.name}
+            Submit Test Metrics — {app.name}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 mt-2">
@@ -401,7 +402,7 @@ function AlertRow({
           {alert.metricType}
         </p>
         <p className="text-[10px] font-mono text-[rgba(232,232,255,0.4)] mt-0.5">
-          {alert.productId} · {formatTs(alert.timestamp)}
+          {alert.appId} · {formatTs(alert.timestamp)}
         </p>
       </div>
       <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -437,14 +438,11 @@ function AlertRow({
   );
 }
 
-// ── Product Metric Card ────────────────────────────────────────────────────
-function ProductMetricCard({
-  product,
-  index,
-}: { product: ProductView; index: number }) {
-  const { data: metrics } = useLatestMetrics(product.id);
-  const { data: history } = useMetricsHistory(product.id);
-  const { data: alertHist } = useAlertHistory(product.id);
+// ── App Metric Card ────────────────────────────────────────────────────
+function AppMetricCard({ app, index }: { app: AppView; index: number }) {
+  const { data: metrics } = useLatestMetrics(app.id);
+  const { data: history } = useMetricsHistory(app.id);
+  const { data: alertHist } = useAlertHistory(app.id);
   const [submitOpen, setSubmitOpen] = useState(false);
 
   const cpu = metrics ? Math.min(100, Number(metrics.cpu)) : 0;
@@ -478,16 +476,16 @@ function ProductMetricCard({
           border: "1px solid rgba(91,157,255,0.12)",
           backdropFilter: "blur(12px)",
         }}
-        data-ocid={`monitoring.product.item.${index}`}
+        data-ocid={`monitoring.app.item.${index}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="text-sm font-display font-semibold text-[#E8E8FF] truncate">
-              {product.name}
+              {app.name}
             </h3>
             <p className="text-[10px] font-mono text-[rgba(232,232,255,0.3)] mt-0.5">
-              code: {product.code}
+              code: {app.appCode}
             </p>
           </div>
           {metrics && (
@@ -637,7 +635,7 @@ function ProductMetricCard({
       </motion.div>
 
       <SubmitMetricsModal
-        product={product}
+        app={app}
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
       />
@@ -646,8 +644,8 @@ function ProductMetricCard({
 }
 
 // ── Alert History Panel ────────────────────────────────────────────────────
-function ProductAlertHistoryRows({ product }: { product: ProductView }) {
-  const { data: hist } = useAlertHistory(product.id);
+function AppAlertHistoryRows({ app }: { app: AppView }) {
+  const { data: hist } = useAlertHistory(app.id);
   if (!hist?.length) return null;
   return (
     <>
@@ -666,7 +664,7 @@ function ProductAlertHistoryRows({ product }: { product: ProductView }) {
                 {a.metricType}
               </p>
               <p className="text-[9px] font-mono text-[rgba(232,232,255,0.3)] truncate">
-                {product.name}
+                {app.name}
               </p>
             </div>
             <span
@@ -692,7 +690,7 @@ function ProductAlertHistoryRows({ product }: { product: ProductView }) {
   );
 }
 
-function AlertHistorySection({ products }: { products: ProductView[] }) {
+function AlertHistorySection({ apps }: { apps: AppView[] }) {
   return (
     <section data-ocid="monitoring.alert_history.section">
       <div className="flex items-center gap-2 mb-4">
@@ -709,7 +707,7 @@ function AlertHistorySection({ products }: { products: ProductView[] }) {
         }}
       >
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-x-4 px-4 py-2 border-b border-[rgba(91,157,255,0.08)]">
-          {["Metric / Product", "Severity", "Value", "Time"].map((h) => (
+          {["Metric / App", "Severity", "Value", "Time"].map((h) => (
             <span
               key={h}
               className="text-[9px] font-mono text-[rgba(232,232,255,0.3)] uppercase tracking-wider"
@@ -718,8 +716,8 @@ function AlertHistorySection({ products }: { products: ProductView[] }) {
             </span>
           ))}
         </div>
-        {products.map((p) => (
-          <ProductAlertHistoryRows key={p.id.toString()} product={p} />
+        {apps.map((p) => (
+          <AppAlertHistoryRows key={p.id.toString()} app={p} />
         ))}
         <div
           className="px-4 py-3 text-center"
@@ -736,7 +734,7 @@ function AlertHistorySection({ products }: { products: ProductView[] }) {
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function MonitoringPage() {
-  const { data: products, isLoading, refetch: refetchProducts } = useProducts();
+  const { data: apps, isLoading, refetch: refetchApps } = useApps();
   const { data: alerts, refetch: refetchAlerts } = useActiveAlerts();
   const resolve = useResolveAlert();
 
@@ -800,7 +798,7 @@ export default function MonitoringPage() {
     : [];
 
   function handleRefresh() {
-    refetchProducts();
+    refetchApps();
     refetchAlerts();
     toast.success("Refreshing system data…");
   }
@@ -918,16 +916,16 @@ export default function MonitoringPage() {
         )}
       </section>
 
-      {/* Per-Product Metrics Grid */}
+      {/* Per-App Metrics Grid */}
       <section data-ocid="monitoring.metrics.section">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="w-4 h-4" style={{ color: "#5B9DFF" }} />
           <h2 className="text-xs font-mono text-[rgba(232,232,255,0.35)] uppercase tracking-widest">
-            Product Metrics
+            App Metrics
           </h2>
-          {products?.length ? (
+          {apps?.length ? (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[rgba(91,157,255,0.1)] text-blue-400 border border-[rgba(91,157,255,0.2)]">
-              {products.length} connected
+              {apps.length} connected
             </span>
           ) : null}
         </div>
@@ -945,7 +943,7 @@ export default function MonitoringPage() {
               />
             ))}
           </div>
-        ) : !products?.length ? (
+        ) : !apps?.length ? (
           <div
             className="rounded-xl p-12 flex flex-col items-center gap-4"
             style={{
@@ -968,30 +966,24 @@ export default function MonitoringPage() {
             </div>
             <div className="text-center">
               <p className="text-sm font-display font-medium text-[rgba(232,232,255,0.5)]">
-                No products registered
+                No apps registered
               </p>
               <p className="text-xs font-mono text-[rgba(232,232,255,0.3)] mt-1">
-                Register a product to start monitoring
+                Register an app to start monitoring
               </p>
             </div>
           </div>
         ) : (
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((p, i) => (
-              <ProductMetricCard
-                key={p.id.toString()}
-                product={p}
-                index={i + 1}
-              />
+            {apps.map((p, i) => (
+              <AppMetricCard key={p.id.toString()} app={p} index={i + 1} />
             ))}
           </div>
         )}
       </section>
 
       {/* Alert History Panel */}
-      {products && products.length > 0 && (
-        <AlertHistorySection products={products} />
-      )}
+      {apps && apps.length > 0 && <AlertHistorySection apps={apps} />}
     </div>
   );
 }

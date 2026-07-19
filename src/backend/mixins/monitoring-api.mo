@@ -10,7 +10,7 @@ mixin (
 ) {
 
   public func submitMetrics(
-    productId : Nat,
+    appId : Text,
     cpu : Nat,
     memory : Nat,
     disk : Nat,
@@ -21,7 +21,7 @@ mixin (
     MonitoringLib.submitMetrics(
       metrics,
       metricsState,
-      productId,
+      appId,
       cpu,
       memory,
       disk,
@@ -31,22 +31,22 @@ mixin (
     );
   };
 
-  public query func getLatestMetrics(productId : Nat) : async ?Types.SystemMetrics {
-    MonitoringLib.getLatest(metrics, productId);
+  public query func getLatestMetrics(appId : Text) : async ?Types.SystemMetrics {
+    MonitoringLib.getLatest(metrics, appId);
   };
 
-  public query func getMetricsHistory(productId : Nat) : async [Types.SystemMetrics] {
-    MonitoringLib.getHistory(metrics, productId);
+  public query func getMetricsHistory(appId : Text) : async [Types.SystemMetrics] {
+    MonitoringLib.getHistory(metrics, appId);
   };
 
   public func createAlert(
-    productId : Nat,
+    appId : Text,
     metricType : Text,
     severity : Types.MetricSeverity,
     value : Nat,
     threshold : Nat,
   ) : async Types.AlertView {
-    MonitoringLib.createAlert(alerts, alertsState, productId, metricType, severity, value, threshold);
+    MonitoringLib.createAlert(alerts, alertsState, appId, metricType, severity, value, threshold);
   };
 
   public func resolveAlert(id : Nat) : async () {
@@ -57,8 +57,8 @@ mixin (
     MonitoringLib.listActiveAlerts(alerts);
   };
 
-  public query func listAlertHistory(productId : Nat) : async [Types.AlertView] {
-    MonitoringLib.listAlertHistory(alerts, productId);
+  public query func listAlertHistory(appId : Text) : async [Types.AlertView] {
+    MonitoringLib.listAlertHistory(alerts, appId);
   };
 
 };

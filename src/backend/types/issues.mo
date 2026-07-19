@@ -11,7 +11,7 @@ module {
     description : Text;
     severity : IssueSeverity;
     var status : IssueStatus;
-    productId : Nat;
+    appId : Text;
     var assignedTo : ?Nat;
     createdAt : Common.Timestamp;
     var updatedAt : Common.Timestamp;
@@ -23,7 +23,7 @@ module {
     description : Text;
     severity : IssueSeverity;
     status : IssueStatus;
-    productId : Nat;
+    appId : Text;
     assignedTo : ?Nat;
     createdAt : Common.Timestamp;
     updatedAt : Common.Timestamp;

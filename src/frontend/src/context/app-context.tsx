@@ -1,4 +1,4 @@
-import type { LinkedAppView } from "@/backend";
+import type { AppViewUI } from "@/hooks/use-backend";
 import { createContext, useContext, useState } from "react";
 
 export type ConnectionStatusMap = Record<
@@ -6,9 +6,9 @@ export type ConnectionStatusMap = Record<
   "connected" | "disconnected" | "refused"
 >;
 
-interface LinkedAppContextValue {
-  selectedApp: LinkedAppView | null;
-  setSelectedApp: (app: LinkedAppView | null) => void;
+interface AppContextValue {
+  selectedApp: AppViewUI | null;
+  setSelectedApp: (app: AppViewUI | null) => void;
   connectionStatusMap: ConnectionStatusMap;
   setConnectionStatus: (
     id: string,
@@ -16,12 +16,12 @@ interface LinkedAppContextValue {
   ) => void;
 }
 
-export const LinkedAppContext = createContext<LinkedAppContextValue | null>(
-  null,
-);
+export const AppRegistryContext = createContext<AppContextValue | null>(null);
 
-export function LinkedAppProvider({ children }: { children: React.ReactNode }) {
-  const [selectedApp, setSelectedApp] = useState<LinkedAppView | null>(null);
+export function AppRegistryProvider({
+  children,
+}: { children: React.ReactNode }) {
+  const [selectedApp, setSelectedApp] = useState<AppViewUI | null>(null);
   const [connectionStatusMap, setConnectionStatusMap] =
     useState<ConnectionStatusMap>({});
 
@@ -33,7 +33,7 @@ export function LinkedAppProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <LinkedAppContext.Provider
+    <AppRegistryContext.Provider
       value={{
         selectedApp,
         setSelectedApp,
@@ -42,15 +42,15 @@ export function LinkedAppProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </LinkedAppContext.Provider>
+    </AppRegistryContext.Provider>
   );
 }
 
-export function useLinkedAppContext() {
-  const ctx = useContext(LinkedAppContext);
+export function useAppRegistryContext() {
+  const ctx = useContext(AppRegistryContext);
   if (!ctx)
     throw new Error(
-      "useLinkedAppContext must be used inside LinkedAppProvider",
+      "useAppRegistryContext must be used inside AppRegistryProvider",
     );
   return ctx;
 }

@@ -5,16 +5,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useAddIssueComment,
+  useApps,
   useCreateIssue,
   useIssueComments,
   useIssues,
-  useProducts,
   useResolveIssue,
   useUpdateIssue,
   useUsers,
 } from "@/hooks/use-backend";
 import { IssueSeverity, IssueStatus } from "@/types";
-import type { IssueComment, IssueView, ProductView, UserView } from "@/types";
+import type { AppView, IssueComment, IssueView, UserView } from "@/types";
 import {
   AlertTriangle,
   Bug,
@@ -351,17 +351,17 @@ function UpdateStatusModal({
 
 // ── CreateIssueModal ──────────────────────────────────────────────────────────
 function CreateIssueModal({
-  products,
+  apps,
   users,
   onClose,
 }: {
-  products: ProductView[];
+  apps: AppView[];
   users: UserView[];
   onClose: () => void;
 }) {
   const createIssue = useCreateIssue();
   const [form, setForm] = useState({
-    productId: products[0] ? String(products[0].id) : "",
+    appId: apps[0] ? String(apps[0].id) : "",
     title: "",
     description: "",
     severity: IssueSeverity.medium,
@@ -373,8 +373,8 @@ function CreateIssueModal({
   }
 
   async function handleCreate() {
-    if (!form.title.trim() || !form.productId) {
-      toast.error("Product and title are required");
+    if (!form.title.trim() || !form.appId) {
+      toast.error("App and title are required");
       return;
     }
     try {
@@ -382,7 +382,7 @@ function CreateIssueModal({
         title: form.title.trim(),
         description: form.description.trim(),
         severity: form.severity as IssueSeverity,
-        productId: BigInt(form.productId),
+        appId: form.appId,
         assignedTo: form.assignedTo ? BigInt(form.assignedTo) : undefined,
       });
       toast.success("Issue created");
@@ -432,20 +432,20 @@ function CreateIssueModal({
         <div className="space-y-4">
           <div>
             <label
-              htmlFor="create-product-select"
+              htmlFor="create-app-select"
               className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2 block"
             >
-              Product
+              App
             </label>
             <select
-              id="create-product-select"
-              value={form.productId}
-              onChange={(e) => update("productId", e.target.value)}
+              id="create-app-select"
+              value={form.appId}
+              onChange={(e) => update("appId", e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-foreground"
-              data-ocid="issues.create_product_select"
+              data-ocid="issues.create_app_select"
             >
-              {products.length === 0 && <option value="">No products</option>}
-              {products.map((p) => (
+              {apps.length === 0 && <option value="">No apps</option>}
+              {apps.map((p) => (
                 <option key={String(p.id)} value={String(p.id)}>
                   {p.name}
                 </option>
@@ -560,14 +560,14 @@ function CreateIssueModal({
 function IssueCard({
   issue,
   index,
-  products,
+  apps,
   users,
   expanded,
   onToggleExpand,
 }: {
   issue: IssueView;
   index: number;
-  products: ProductView[];
+  apps: AppView[];
   users: UserView[];
   expanded: boolean;
   onToggleExpand: () => void;
@@ -576,7 +576,7 @@ function IssueCard({
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const isResolved = (issue.status as IssueStatus) === IssueStatus.resolved;
   const colors = SEVERITY_COLORS[issue.severity as IssueSeverity];
-  const product = products.find((p) => p.id === issue.productId);
+  const app = apps.find((p) => p.id === issue.appId);
   const assignedUser = users.find(
     (u) => issue.assignedTo != null && u.id === issue.assignedTo,
   );
@@ -644,9 +644,9 @@ function IssueCard({
               </p>
 
               <div className="flex items-center gap-3 mt-2 flex-wrap">
-                {product && (
+                {app && (
                   <span className="inline-flex items-center gap-1 text-xs text-blue-300/80 bg-blue-500/10 border border-blue-500/20 rounded-md px-2 py-0.5">
-                    {product.name}
+                    {app.name}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -758,13 +758,13 @@ type SeverityFilter = "all" | IssueSeverity;
 export default function IssuesPage() {
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [appFilter, setAppFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: allIssues = [], isLoading: issuesLoading } = useIssues();
-  const { data: products = [] } = useProducts();
+  const { data: apps = [] } = useApps();
   const { data: users = [] } = useUsers();
 
   // Status counts
@@ -794,8 +794,8 @@ export default function IssuesPage() {
         (i) => (i.severity as IssueSeverity) === severityFilter,
       );
     }
-    if (productFilter !== "all") {
-      list = list.filter((i) => String(i.productId) === productFilter);
+    if (appFilter !== "all") {
+      list = list.filter((i) => String(i.appId) === appFilter);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -806,7 +806,7 @@ export default function IssuesPage() {
       );
     }
     return list.sort((a, b) => Number(b.createdAt - a.createdAt));
-  }, [allIssues, statusTab, severityFilter, productFilter, search]);
+  }, [allIssues, statusTab, severityFilter, appFilter, search]);
 
   const STATUS_TABS: { id: StatusTab; label: string; count: number }[] = [
     { id: "all", label: "All", count: allIssues.length },
@@ -886,7 +886,7 @@ export default function IssuesPage() {
           ))}
         </div>
 
-        {/* Severity + Product + Search */}
+        {/* Severity + App + Search */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
@@ -907,13 +907,13 @@ export default function IssuesPage() {
           </div>
 
           <select
-            value={productFilter}
-            onChange={(e) => setProductFilter(e.target.value)}
+            value={appFilter}
+            onChange={(e) => setAppFilter(e.target.value)}
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground"
-            data-ocid="issues.filter.product_select"
+            data-ocid="issues.filter.app_select"
           >
-            <option value="all">All Products</option>
-            {products.map((p) => (
+            <option value="all">All Apps</option>
+            {apps.map((p) => (
               <option key={String(p.id)} value={String(p.id)}>
                 {p.name}
               </option>
@@ -966,7 +966,7 @@ export default function IssuesPage() {
             {search ||
             statusTab !== "all" ||
             severityFilter !== "all" ||
-            productFilter !== "all"
+            appFilter !== "all"
               ? "Try adjusting your filters"
               : "Create your first issue to start tracking"}
           </p>
@@ -989,7 +989,7 @@ export default function IssuesPage() {
               key={String(issue.id)}
               issue={issue}
               index={idx}
-              products={products}
+              apps={apps}
               users={users}
               expanded={expandedId === String(issue.id)}
               onToggleExpand={() =>
@@ -1006,7 +1006,7 @@ export default function IssuesPage() {
       <AnimatePresence>
         {showCreate && (
           <CreateIssueModal
-            products={products}
+            apps={apps}
             users={users}
             onClose={() => setShowCreate(false)}
           />

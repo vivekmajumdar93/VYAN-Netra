@@ -1,13 +1,16 @@
 import List "mo:core/List";
 import Time "mo:core/Time";
-import Runtime "mo:core/Runtime";
+import Text "mo:core/Text";
+import Blob "mo:core/Blob";
+import Error "mo:core/Error";
 import Types "../types/email";
+import HttpTypes "../types/http";
 
 module {
 
   public func configToView(c : Types.EmailConfig) : Types.EmailConfigView = {
     id = c.id;
-    productId = c.productId;
+    appId = c.appId;
     senderName = c.senderName;
     senderEmail = c.senderEmail;
     bounceEmail = c.bounceEmail;
@@ -17,7 +20,7 @@ module {
 
   public func templateToView(t : Types.EmailTemplate) : Types.EmailTemplateView = {
     id = t.id;
-    productId = t.productId;
+    appId = t.appId;
     name = t.name;
     subject = t.subject;
     body = t.body;
@@ -27,7 +30,7 @@ module {
   public func createConfig(
     configs : List.List<Types.EmailConfig>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     senderName : Text,
     senderEmail : Text,
     bounceEmail : Text,
@@ -36,7 +39,7 @@ module {
     state.nextId += 1;
     let config : Types.EmailConfig = {
       id;
-      productId;
+      appId;
       senderName;
       senderEmail;
       bounceEmail;
@@ -59,7 +62,7 @@ module {
       if (item.id == id) {
         {
           id = item.id;
-          productId = item.productId;
+          appId = item.appId;
           senderName;
           senderEmail;
           bounceEmail;
@@ -76,8 +79,8 @@ module {
     configs.append(filtered);
   };
 
-  public func listConfigs(configs : List.List<Types.EmailConfig>, productId : Nat) : [Types.EmailConfigView] {
-    configs.filter(func(c) { c.productId == productId })
+  public func listConfigs(configs : List.List<Types.EmailConfig>, appId : Text) : [Types.EmailConfigView] {
+    configs.filter(func(c) { c.appId == appId })
       .map<Types.EmailConfig, Types.EmailConfigView>(configToView)
       .toArray();
   };
@@ -85,7 +88,7 @@ module {
   public func createTemplate(
     templates : List.List<Types.EmailTemplate>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     name : Text,
     subject : Text,
     body : Text,
@@ -95,7 +98,7 @@ module {
     let now = Time.now();
     let tmpl : Types.EmailTemplate = {
       id;
-      productId;
+      appId;
       name;
       subject;
       var body;
@@ -116,7 +119,7 @@ module {
       if (item.id == id) {
         {
           id = item.id;
-          productId = item.productId;
+          appId = item.appId;
           name = item.name;
           subject;
           var body;
@@ -132,8 +135,8 @@ module {
     templates.append(filtered);
   };
 
-  public func listTemplates(templates : List.List<Types.EmailTemplate>, productId : Nat) : [Types.EmailTemplateView] {
-    templates.filter(func(t) { t.productId == productId })
+  public func listTemplates(templates : List.List<Types.EmailTemplate>, appId : Text) : [Types.EmailTemplateView] {
+    templates.filter(func(t) { t.appId == appId })
       .map<Types.EmailTemplate, Types.EmailTemplateView>(templateToView)
       .toArray();
   };
@@ -141,27 +144,88 @@ module {
   public func addEmailLog(
     logs : List.List<Types.EmailLog>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     recipient : Text,
     subject : Text,
     status : Types.EmailStatus,
+    detail : Text,
   ) : Types.EmailLog {
     let id = state.nextId;
     state.nextId += 1;
     let entry : Types.EmailLog = {
       id;
-      productId;
+      appId;
       recipient;
       subject;
       status;
+      detail;
       timestamp = Time.now();
     };
     logs.add(entry);
     entry;
   };
 
-  public func listEmailLogs(logs : List.List<Types.EmailLog>, productId : Nat) : [Types.EmailLog] {
-    logs.filter(func(l) { l.productId == productId }).toArray();
+  public func listEmailLogs(logs : List.List<Types.EmailLog>, appId : Text) : [Types.EmailLog] {
+    logs.filter(func(l) { l.appId == appId }).toArray();
+  };
+
+  // ── Zoho Mail API sending ────────────────────────────────────────────────
+  // NOTE: sends real HTTPS outcalls. Not exercisable/testable in a sandbox
+  // without live cycles and real Zoho credentials — review carefully and
+  // test against a real deployment before relying on it.
+
+  func jsonEscape(t : Text) : Text {
+    var out = "";
+    for (c in t.chars()) {
+      switch c {
+        case '"' { out #= "\\\"" };
+        case '\\' { out #= "\\\\" };
+        case '\n' { out #= "\\n" };
+        case '\r' { out #= "\\r" };
+        case '\t' { out #= "\\t" };
+        case _ { out #= Text.fromChar(c) };
+      };
+    };
+    out;
+  };
+
+  public func sendViaZoho(
+    transformFn : shared query HttpTypes.TransformArgs -> async HttpTypes.HttpResponse,
+    accountId : Text,
+    accessToken : Text,
+    fromAddress : Text,
+    toAddress : Text,
+    subject : Text,
+    content : Text,
+  ) : async (Bool, Text) {
+    let ic : actor { http_request : HttpTypes.HttpRequestArgs -> async HttpTypes.HttpResponse } = actor "aaaaa-aa";
+    let url = "https://mail.zoho.com/api/accounts/" # accountId # "/messages";
+    let jsonBody = "{\"fromAddress\":\"" # jsonEscape(fromAddress)
+      # "\",\"toAddress\":\"" # jsonEscape(toAddress)
+      # "\",\"subject\":\"" # jsonEscape(subject)
+      # "\",\"content\":\"" # jsonEscape(content) # "\"}";
+    let request : HttpTypes.HttpRequestArgs = {
+      url;
+      max_response_bytes = ?(10_000 : Nat64);
+      method = #post;
+      headers = [
+        { name = "Authorization"; value = "Zoho-oauthtoken " # accessToken },
+        { name = "Content-Type"; value = "application/json" },
+      ];
+      body = ?Text.encodeUtf8(jsonBody);
+      transform = ?{ function = transformFn; context = Blob.fromArray([]) };
+      is_replicated = ?true;
+    };
+    try {
+      let response = await (with cycles = 50_000_000_000) ic.http_request(request);
+      if (response.status >= 200 and response.status < 300) {
+        (true, "OK");
+      } else {
+        (false, "Zoho responded with HTTP " # debug_show (response.status));
+      };
+    } catch (e) {
+      (false, "Outcall failed: " # Error.message(e));
+    };
   };
 
 };

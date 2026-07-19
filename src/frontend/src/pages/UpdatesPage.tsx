@@ -1,4 +1,3 @@
-import type { UpdateView } from "@/backend";
 import { UpdateStatus } from "@/backend";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useAllUpdates,
+  useApps,
   useCreateUpdate,
   useMarkUpdateDeployed,
-  useProducts,
   useScheduleUpdate,
 } from "@/hooks/use-backend";
+import type { UpdateView } from "@/types";
 import {
   Calendar,
   CheckCircle2,
@@ -109,11 +109,11 @@ function formatDate(ns: bigint): string {
 function UpdateCard({
   update,
   index,
-  productName,
+  appName,
 }: {
   update: UpdateView;
   index: number;
-  productName: string;
+  appName: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const deploy = useMarkUpdateDeployed();
@@ -168,7 +168,7 @@ function UpdateCard({
                 border: "1px solid rgba(91,157,255,0.22)",
               }}
             >
-              {productName}
+              {appName}
             </span>
             <span
               className="font-mono font-bold text-sm"
@@ -396,10 +396,10 @@ function EmptyState({ tab }: { tab: TabId }) {
 
 function ChangelogTimeline({
   updates,
-  products,
+  apps,
 }: {
   updates: UpdateView[];
-  products: Array<{ id: bigint; name: string }>;
+  apps: Array<{ id: string; name: string }>;
 }) {
   const deployed = [...updates]
     .filter((u) => u.status === UpdateStatus.deployed)
@@ -422,8 +422,7 @@ function ChangelogTimeline({
       />
       <div className="space-y-4">
         {deployed.map((u, i) => {
-          const pName =
-            products.find((p) => p.id === u.productId)?.name ?? "Unknown";
+          const pName = apps.find((p) => p.id === u.appId)?.name ?? "Unknown";
           return (
             <div
               key={u.id.toString()}
@@ -489,19 +488,19 @@ function ChangelogTimeline({
 // ── Create Update Modal ─────────────────────────────────────────────────────
 
 function CreateUpdateModal({ onClose }: { onClose: () => void }) {
-  const { data: products } = useProducts();
+  const { data: apps } = useApps();
   const createUpdate = useCreateUpdate();
   const scheduleUpdate = useScheduleUpdate();
   const [version, setVersion] = useState("1.0.0");
   const [notes, setNotes] = useState("");
   const [sizeKb, setSizeKb] = useState("");
-  const [productId, setProductId] = useState("");
+  const [appId, setAppId] = useState("");
   const [scheduleAt, setScheduleAt] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!productId) {
-      toast.error("Select a product");
+    if (!appId) {
+      toast.error("Select an app");
       return;
     }
     try {
@@ -509,7 +508,7 @@ function CreateUpdateModal({ onClose }: { onClose: () => void }) {
         Math.round(Number.parseFloat(sizeKb || "0") * 1024),
       );
       const result = await createUpdate.mutateAsync({
-        productId: BigInt(productId),
+        appId,
         version: version.trim(),
         releaseNotes: notes.trim(),
         size: sizeBytes,
@@ -583,11 +582,11 @@ function CreateUpdateModal({ onClose }: { onClose: () => void }) {
               className="text-[10px] font-mono uppercase tracking-widest"
               style={{ color: "rgba(232,232,255,0.45)" }}
             >
-              Product
+              App
             </Label>
-            <Select value={productId} onValueChange={setProductId}>
+            <Select value={appId} onValueChange={setAppId}>
               <SelectTrigger
-                data-ocid="updates.product.select"
+                data-ocid="updates.app.select"
                 className="text-sm"
                 style={{
                   background: "rgba(91,157,255,0.06)",
@@ -595,10 +594,10 @@ function CreateUpdateModal({ onClose }: { onClose: () => void }) {
                   color: "#E8E8FF",
                 }}
               >
-                <SelectValue placeholder="Select product" />
+                <SelectValue placeholder="Select app" />
               </SelectTrigger>
               <SelectContent>
-                {(products ?? []).map((p) => (
+                {(apps ?? []).map((p) => (
                   <SelectItem key={p.id.toString()} value={p.id.toString()}>
                     {p.name}
                   </SelectItem>
@@ -751,22 +750,21 @@ export default function UpdatesPage() {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("pending");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [appFilter, setAppFilter] = useState<string>("all");
 
   const { data: updates, isLoading: updatesLoading } = useAllUpdates();
-  const { data: products } = useProducts();
+  const { data: apps } = useApps();
 
   const pendingCount =
     updates?.filter((u) => u.status === UpdateStatus.pending).length ?? 0;
 
-  const productMap = new Map<string, string>(
-    (products ?? []).map((p) => [p.id.toString(), p.name]),
+  const appMap = new Map<string, string>(
+    (apps ?? []).map((p) => [p.id.toString(), p.name]),
   );
 
   const filtered = (updates ?? []).filter((u) => {
-    const matchesProduct =
-      productFilter === "all" || u.productId.toString() === productFilter;
-    if (!matchesProduct) return false;
+    const matchesApp = appFilter === "all" || u.appId.toString() === appFilter;
+    if (!matchesApp) return false;
     if (activeTab === "all") return true;
     return getStatusKey(u.status) === activeTab;
   });
@@ -775,14 +773,12 @@ export default function UpdatesPage() {
     if (tab === "all")
       return (
         updates?.filter(
-          (u) =>
-            productFilter === "all" || u.productId.toString() === productFilter,
+          (u) => appFilter === "all" || u.appId.toString() === appFilter,
         ).length ?? 0
       );
     return (
       updates?.filter((u) => {
-        const matchP =
-          productFilter === "all" || u.productId.toString() === productFilter;
+        const matchP = appFilter === "all" || u.appId.toString() === appFilter;
         const statusKey = getStatusKey(u.status);
         return matchP && statusKey === tab;
       }).length ?? 0
@@ -925,9 +921,9 @@ export default function UpdatesPage() {
           </div>
         )}
 
-        {/* Product filter dropdown */}
+        {/* App filter dropdown */}
         <div className="ml-auto">
-          <Select value={productFilter} onValueChange={setProductFilter}>
+          <Select value={appFilter} onValueChange={setAppFilter}>
             <SelectTrigger
               className="text-[11px] font-mono h-8 min-w-[140px]"
               style={{
@@ -935,13 +931,13 @@ export default function UpdatesPage() {
                 border: "1px solid rgba(91,157,255,0.18)",
                 color: "rgba(232,232,255,0.7)",
               }}
-              data-ocid="updates.product_filter.select"
+              data-ocid="updates.app_filter.select"
             >
-              <SelectValue placeholder="All Products" />
+              <SelectValue placeholder="All Apps" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Products</SelectItem>
-              {(products ?? []).map((p) => (
+              <SelectItem value="all">All Apps</SelectItem>
+              {(apps ?? []).map((p) => (
                 <SelectItem key={p.id.toString()} value={p.id.toString()}>
                   {p.name}
                 </SelectItem>
@@ -961,7 +957,7 @@ export default function UpdatesPage() {
       ) : viewMode === "changelog" ? (
         <ChangelogTimeline
           updates={updates ?? []}
-          products={(products ?? []).map((p) => ({ id: p.id, name: p.name }))}
+          apps={(apps ?? []).map((p) => ({ id: p.id, name: p.name }))}
         />
       ) : filtered.length === 0 ? (
         <EmptyState tab={activeTab} />
@@ -972,7 +968,7 @@ export default function UpdatesPage() {
               key={u.id.toString()}
               update={u}
               index={i + 1}
-              productName={productMap.get(u.productId.toString()) ?? "Unknown"}
+              appName={appMap.get(u.appId.toString()) ?? "Unknown"}
             />
           ))}
         </div>

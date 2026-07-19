@@ -6,7 +6,7 @@ module {
 
   public type Update = {
     id : UpdateId;
-    productId : Nat;
+    appId : Text;
     version : Text;
     releaseNotes : Text;
     size : Nat;
@@ -18,7 +18,7 @@ module {
 
   public type UpdateView = {
     id : UpdateId;
-    productId : Nat;
+    appId : Text;
     version : Text;
     releaseNotes : Text;
     size : Nat;

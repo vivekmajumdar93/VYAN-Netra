@@ -1,6 +1,8 @@
-import type { EmailConfigView, EmailLog, EmailTemplateView } from "@/backend";
+import type { EmailConfigView, EmailTemplateView } from "@/backend";
 import { EmailStatus } from "@/backend";
+import { UserStatus } from "@/backend";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,15 +16,18 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  useApps,
   useCreateEmailConfig,
   useCreateEmailTemplate,
   useEmailConfigs,
   useEmailLogs,
   useEmailTemplates,
-  useProducts,
+  useSendEmailBatch,
   useUpdateEmailConfig,
   useUpdateEmailTemplate,
+  useUsersByApp,
 } from "@/hooks/use-backend";
+import type { EmailLog } from "@/types";
 import {
   AlertTriangle,
   Calendar,
@@ -32,7 +37,9 @@ import {
   List,
   Mail,
   Plus,
+  Send,
   Settings2,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -264,12 +271,12 @@ function ConfigCard({
 // ── Template Editor Modal ─────────────────────────────────────────────────────
 
 interface TemplateModalProps {
-  productId: bigint;
+  appId: string;
   existing?: EmailTemplateView;
   onClose: () => void;
 }
 
-function TemplateModal({ productId, existing, onClose }: TemplateModalProps) {
+function TemplateModal({ appId, existing, onClose }: TemplateModalProps) {
   const createTemplate = useCreateEmailTemplate();
   const updateTemplate = useUpdateEmailTemplate();
   const [name, setName] = useState(existing?.name ?? "");
@@ -285,7 +292,7 @@ function TemplateModal({ productId, existing, onClose }: TemplateModalProps) {
         await updateTemplate.mutateAsync({ id: existing.id, subject, body });
         toast.success("Template updated");
       } else {
-        await createTemplate.mutateAsync({ productId, name, subject, body });
+        await createTemplate.mutateAsync({ appId, name, subject, body });
         toast.success("Template created");
       }
       onClose();
@@ -355,7 +362,7 @@ function TemplateModal({ productId, existing, onClose }: TemplateModalProps) {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               required
-              placeholder="Welcome to {{product_name}}"
+              placeholder="Welcome to {{app_name}}"
               data-ocid="email.template.subject.input"
               className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF]"
             />
@@ -408,9 +415,9 @@ function TemplateModal({ productId, existing, onClose }: TemplateModalProps) {
 // ── Config Tab ────────────────────────────────────────────────────────────────
 
 function AddConfigModal({
-  productId,
+  appId,
   onClose,
-}: { productId: bigint; onClose: () => void }) {
+}: { appId: string; onClose: () => void }) {
   const createConfig = useCreateEmailConfig();
   const [senderName, setSenderName] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
@@ -420,7 +427,7 @@ function AddConfigModal({
     e.preventDefault();
     try {
       await createConfig.mutateAsync({
-        productId,
+        appId,
         senderName,
         senderEmail,
         bounceEmail,
@@ -527,8 +534,8 @@ function AddConfigModal({
 
 // ── Config Tab Content ────────────────────────────────────────────────────────
 
-function ConfigTab({ productId }: { productId: bigint }) {
-  const { data: configs } = useEmailConfigs(productId);
+function ConfigTab({ appId }: { appId: string }) {
+  const { data: configs } = useEmailConfigs(appId);
   const [showAdd, setShowAdd] = useState(false);
 
   return (
@@ -561,7 +568,7 @@ function ConfigTab({ productId }: { productId: bigint }) {
             No email configurations yet
           </p>
           <p className="text-xs font-mono text-[rgba(232,232,255,0.2)] text-center">
-            Add a config to start sending emails from this product
+            Add a config to start sending emails from this app
           </p>
         </div>
       ) : (
@@ -573,10 +580,7 @@ function ConfigTab({ productId }: { productId: bigint }) {
       )}
 
       {showAdd && (
-        <AddConfigModal
-          productId={productId}
-          onClose={() => setShowAdd(false)}
-        />
+        <AddConfigModal appId={appId} onClose={() => setShowAdd(false)} />
       )}
     </div>
   );
@@ -584,8 +588,8 @@ function ConfigTab({ productId }: { productId: bigint }) {
 
 // ── Templates Tab Content ─────────────────────────────────────────────────────
 
-function TemplatesTab({ productId }: { productId: bigint }) {
-  const { data: templates } = useEmailTemplates(productId);
+function TemplatesTab({ appId }: { appId: string }) {
+  const { data: templates } = useEmailTemplates(appId);
   const [modalTarget, setModalTarget] = useState<
     EmailTemplateView | null | "new"
   >(null);
@@ -672,18 +676,246 @@ function TemplatesTab({ productId }: { productId: bigint }) {
       )}
 
       {modalTarget === "new" && (
-        <TemplateModal
-          productId={productId}
-          onClose={() => setModalTarget(null)}
-        />
+        <TemplateModal appId={appId} onClose={() => setModalTarget(null)} />
       )}
       {modalTarget && modalTarget !== "new" && (
         <TemplateModal
-          productId={productId}
+          appId={appId}
           existing={modalTarget}
           onClose={() => setModalTarget(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ── Compose Tab Content ───────────────────────────────────────────────────────
+// Select this app's users (any combination), pick a VYAN template or write
+// a one-off message, and send — real delivery via the Zoho outcall on the
+// backend, logged into the Logs tab either way.
+
+function ComposeTab({ appId }: { appId: string }) {
+  const { data: users } = useUsersByApp(appId);
+  const { data: templates } = useEmailTemplates(appId);
+  const sendBatch = useSendEmailBatch();
+
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [extraRecipients, setExtraRecipients] = useState("");
+  const [templateId, setTemplateId] = useState<string>("custom");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+
+  const acceptedUsers = (users ?? []).filter(
+    (u) => u.status === UserStatus.active,
+  );
+
+  function toggleUser(id: string) {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setSelectedUserIds((prev) =>
+      prev.size === acceptedUsers.length
+        ? new Set()
+        : new Set(acceptedUsers.map((u) => u.id.toString())),
+    );
+  }
+
+  function applyTemplate(id: string) {
+    setTemplateId(id);
+    if (id === "custom") return;
+    const tmpl = templates?.find((t) => t.id.toString() === id);
+    if (tmpl) {
+      setSubject(tmpl.subject);
+      setBody(tmpl.body);
+    }
+  }
+
+  async function handleSend() {
+    const picked = acceptedUsers.filter((u) =>
+      selectedUserIds.has(u.id.toString()),
+    );
+    const extras = extraRecipients
+      .split(/[,\n]/)
+      .map((e) => e.trim())
+      .filter(Boolean);
+    const recipients = [...picked.map((u) => u.email), ...extras];
+
+    if (recipients.length === 0) {
+      toast.error("Select at least one user or add a recipient email");
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("Subject and body are required");
+      return;
+    }
+
+    try {
+      const logs = await sendBatch.mutateAsync({
+        appId,
+        recipients,
+        subject: subject.trim(),
+        body: body.trim(),
+      });
+      const failed = logs.filter((l) => l.status !== EmailStatus.sent).length;
+      if (failed === 0) {
+        toast.success(`Sent to ${logs.length} recipient(s)`);
+      } else {
+        toast.warning(
+          `Sent ${logs.length - failed}/${logs.length} — ${failed} failed (see Logs tab)`,
+        );
+      }
+      setSelectedUserIds(new Set());
+      setExtraRecipients("");
+    } catch {
+      toast.error("Failed to send — check Zoho is configured in Settings");
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Recipients */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider flex items-center gap-1.5">
+            <Users className="w-3 h-3" /> Recipients · {acceptedUsers.length}{" "}
+            accepted user(s)
+          </Label>
+          {acceptedUsers.length > 0 && (
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="text-[10px] font-mono text-blue-400 hover:text-blue-300"
+              data-ocid="email.compose.select_all"
+            >
+              {selectedUserIds.size === acceptedUsers.length
+                ? "Deselect all"
+                : "Select all"}
+            </button>
+          )}
+        </div>
+        <div
+          className="rounded-xl p-3 max-h-48 overflow-y-auto space-y-1"
+          style={GLASS}
+          data-ocid="email.compose.user_list"
+        >
+          {acceptedUsers.length === 0 ? (
+            <p className="text-xs font-mono text-[rgba(232,232,255,0.3)] px-2 py-3 text-center">
+              No accepted users for this app yet — moderate pending users on the
+              Users page, or add recipients below.
+            </p>
+          ) : (
+            acceptedUsers.map((u) => {
+              const checkboxId = `compose-user-${u.id.toString()}`;
+              return (
+                <div
+                  key={u.id.toString()}
+                  className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[rgba(91,157,255,0.06)]"
+                >
+                  <Checkbox
+                    id={checkboxId}
+                    checked={selectedUserIds.has(u.id.toString())}
+                    onCheckedChange={() => toggleUser(u.id.toString())}
+                    data-ocid={`email.compose.user_checkbox.${u.id.toString()}`}
+                  />
+                  <label
+                    htmlFor={checkboxId}
+                    className="flex items-center gap-2.5 cursor-pointer min-w-0"
+                  >
+                    <span className="text-xs font-body text-[#E8E8FF] truncate">
+                      {u.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] truncate">
+                      {u.email}
+                    </span>
+                  </label>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <Textarea
+          value={extraRecipients}
+          onChange={(e) => setExtraRecipients(e.target.value)}
+          placeholder="Additional recipients (comma or newline separated)"
+          rows={2}
+          data-ocid="email.compose.extra_recipients"
+          className="mt-2 font-mono text-xs bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] placeholder:text-[rgba(232,232,255,0.25)]"
+        />
+      </div>
+
+      {/* Template picker */}
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+          VYAN Template
+        </Label>
+        <Select value={templateId} onValueChange={applyTemplate}>
+          <SelectTrigger
+            data-ocid="email.compose.template_select"
+            className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] text-xs font-mono"
+          >
+            <SelectValue placeholder="Custom message" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="custom" className="font-mono text-xs">
+              Custom message
+            </SelectItem>
+            {(templates ?? []).map((t) => (
+              <SelectItem
+                key={t.id.toString()}
+                value={t.id.toString()}
+                className="font-mono text-xs"
+              >
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Subject + body */}
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+          Subject
+        </Label>
+        <Input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Subject line"
+          data-ocid="email.compose.subject"
+          className="bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF]"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.5)] uppercase tracking-wider">
+          Body
+        </Label>
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={10}
+          placeholder="Message body"
+          data-ocid="email.compose.body"
+          className="font-mono text-xs resize-y bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] placeholder:text-[rgba(232,232,255,0.2)]"
+        />
+      </div>
+
+      <Button
+        onClick={handleSend}
+        disabled={sendBatch.isPending}
+        className="gap-1.5"
+        data-ocid="email.compose.send_button"
+      >
+        <Send className="w-3.5 h-3.5" />
+        {sendBatch.isPending ? "Sending…" : "Send"}
+      </Button>
     </div>
   );
 }
@@ -740,8 +972,8 @@ function LogRow({ log, index }: { log: EmailLog; index: number }) {
   );
 }
 
-function LogsTab({ productId }: { productId: bigint }) {
-  const { data: logs } = useEmailLogs(productId);
+function LogsTab({ appId }: { appId: string }) {
+  const { data: logs } = useEmailLogs(appId);
 
   return (
     <div>
@@ -789,11 +1021,11 @@ function LogsTab({ productId }: { productId: bigint }) {
   );
 }
 
-// ── Product Panel ─────────────────────────────────────────────────────────────
+// ── App Panel ─────────────────────────────────────────────────────────────
 
-function ProductEmailPanel({ productId }: { productId: bigint }) {
+function AppEmailPanel({ appId }: { appId: string }) {
   return (
-    <Tabs defaultValue="config">
+    <Tabs defaultValue="compose">
       <TabsList
         className="mb-5"
         style={{
@@ -801,6 +1033,13 @@ function ProductEmailPanel({ productId }: { productId: bigint }) {
           border: "1px solid rgba(91,157,255,0.12)",
         }}
       >
+        <TabsTrigger
+          value="compose"
+          data-ocid="email.compose.tab"
+          className="text-xs font-mono gap-1.5"
+        >
+          <Send className="w-3 h-3" /> Compose
+        </TabsTrigger>
         <TabsTrigger
           value="config"
           data-ocid="email.config.tab"
@@ -824,14 +1063,17 @@ function ProductEmailPanel({ productId }: { productId: bigint }) {
         </TabsTrigger>
       </TabsList>
 
+      <TabsContent value="compose">
+        <ComposeTab appId={appId} />
+      </TabsContent>
       <TabsContent value="config">
-        <ConfigTab productId={productId} />
+        <ConfigTab appId={appId} />
       </TabsContent>
       <TabsContent value="templates">
-        <TemplatesTab productId={productId} />
+        <TemplatesTab appId={appId} />
       </TabsContent>
       <TabsContent value="logs">
-        <LogsTab productId={productId} />
+        <LogsTab appId={appId} />
       </TabsContent>
     </Tabs>
   );
@@ -840,12 +1082,10 @@ function ProductEmailPanel({ productId }: { productId: bigint }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EmailPage() {
-  const { data: products } = useProducts();
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const { data: apps } = useApps();
+  const [selectedAppId, setSelectedAppId] = useState<string>("");
 
-  const selectedProduct = products?.find(
-    (p) => p.id.toString() === selectedProductId,
-  );
+  const selectedApp = apps?.find((p) => p.id.toString() === selectedAppId);
 
   return (
     <div className="p-6" data-ocid="email.page">
@@ -860,15 +1100,15 @@ export default function EmailPage() {
           </p>
         </div>
 
-        <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+        <Select value={selectedAppId} onValueChange={setSelectedAppId}>
           <SelectTrigger
-            data-ocid="email.product.select"
+            data-ocid="email.app.select"
             className="w-52 bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.2)] text-[#E8E8FF] text-xs font-mono"
           >
-            <SelectValue placeholder="Select product…" />
+            <SelectValue placeholder="Select app…" />
           </SelectTrigger>
           <SelectContent>
-            {(products ?? []).map((p) => (
+            {(apps ?? []).map((p) => (
               <SelectItem
                 key={p.id.toString()}
                 value={p.id.toString()}
@@ -882,7 +1122,7 @@ export default function EmailPage() {
       </div>
 
       {/* Content */}
-      {!selectedProduct ? (
+      {!selectedApp ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -904,21 +1144,21 @@ export default function EmailPage() {
           </div>
           <div className="text-center">
             <p className="text-sm font-body font-medium text-[rgba(232,232,255,0.55)]">
-              No product selected
+              No app selected
             </p>
             <p className="text-xs font-mono text-[rgba(232,232,255,0.25)] mt-1">
-              Choose a product from the dropdown to manage its email settings
+              Choose an app from the dropdown to manage its email settings
             </p>
           </div>
         </motion.div>
       ) : (
         <motion.div
-          key={selectedProductId}
+          key={selectedAppId}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          {/* Product badge */}
+          {/* App badge */}
           <div className="flex items-center gap-2 mb-5">
             <div
               className="w-6 h-6 rounded-md flex items-center justify-center"
@@ -930,14 +1170,14 @@ export default function EmailPage() {
               <Mail className="w-3.5 h-3.5 text-blue-400" />
             </div>
             <span className="text-sm font-body font-semibold text-[#E8E8FF]">
-              {selectedProduct.name}
+              {selectedApp.name}
             </span>
             <span className="text-xs font-mono text-[rgba(232,232,255,0.3)] ml-1">
-              {selectedProduct.code}
+              {selectedApp.appCode}
             </span>
           </div>
 
-          <ProductEmailPanel productId={selectedProduct.id} />
+          <AppEmailPanel appId={selectedApp.id} />
         </motion.div>
       )}
     </div>

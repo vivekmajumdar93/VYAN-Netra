@@ -12,7 +12,7 @@ module {
     body = n.body;
     severity = n.severity;
     notifType = n.notifType;
-    productId = n.productId;
+    appId = n.appId;
     isRead = n.isRead;
     snoozed = n.snoozed;
     snoozedUntil = n.snoozedUntil;
@@ -26,7 +26,7 @@ module {
     body : Text,
     severity : Types.NotificationSeverity,
     notifType : Types.NotificationType,
-    productId : ?Nat,
+    appId : ?Text,
   ) : Types.NotificationView {
     let id = state.nextId;
     state.nextId += 1;
@@ -36,7 +36,7 @@ module {
       body;
       severity;
       notifType;
-      productId;
+      appId;
       var isRead = false;
       var snoozed = false;
       var snoozedUntil = null;
@@ -76,7 +76,7 @@ module {
   public func listFiltered(
     notifications : List.List<Types.Notification>,
     notifType : ?Types.NotificationType,
-    productId : ?Nat,
+    appId : ?Text,
     isRead : ?Bool,
   ) : [Types.NotificationView] {
     notifications.filter(func(n) {
@@ -84,15 +84,15 @@ module {
         case (?t) { n.notifType == t };
         case null { true };
       };
-      let productMatch = switch (productId) {
-        case (?pid) { n.productId == ?pid };
+      let appMatch = switch (appId) {
+        case (?aid) { n.appId == ?aid };
         case null { true };
       };
       let readMatch = switch (isRead) {
         case (?r) { n.isRead == r };
         case null { true };
       };
-      typeMatch and productMatch and readMatch;
+      typeMatch and appMatch and readMatch;
     })
     .map<Types.Notification, Types.NotificationView>(toView)
     .toArray();

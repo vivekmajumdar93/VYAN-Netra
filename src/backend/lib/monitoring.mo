@@ -7,7 +7,7 @@ module {
 
   public func toAlertView(a : Types.Alert) : Types.AlertView = {
     id = a.id;
-    productId = a.productId;
+    appId = a.appId;
     metricType = a.metricType;
     severity = a.severity;
     value = a.value;
@@ -20,7 +20,7 @@ module {
   public func submitMetrics(
     metrics : List.List<Types.SystemMetrics>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     cpu : Nat,
     memory : Nat,
     disk : Nat,
@@ -32,7 +32,7 @@ module {
     state.nextId += 1;
     let snap : Types.SystemMetrics = {
       id;
-      productId;
+      appId;
       cpu;
       memory;
       disk;
@@ -45,13 +45,13 @@ module {
     snap;
   };
 
-  public func getLatest(metrics : List.List<Types.SystemMetrics>, productId : Nat) : ?Types.SystemMetrics {
-    let filtered = metrics.filter(func(m) { m.productId == productId });
+  public func getLatest(metrics : List.List<Types.SystemMetrics>, appId : Text) : ?Types.SystemMetrics {
+    let filtered = metrics.filter(func(m) { m.appId == appId });
     filtered.last();
   };
 
-  public func getHistory(metrics : List.List<Types.SystemMetrics>, productId : Nat) : [Types.SystemMetrics] {
-    let filtered = metrics.filter(func(m) { m.productId == productId });
+  public func getHistory(metrics : List.List<Types.SystemMetrics>, appId : Text) : [Types.SystemMetrics] {
+    let filtered = metrics.filter(func(m) { m.appId == appId });
     let size = filtered.size();
     let start : Int = if (size > 24) { size - 24 } else { 0 };
     filtered.sliceToArray(start, size);
@@ -60,7 +60,7 @@ module {
   public func createAlert(
     alerts : List.List<Types.Alert>,
     state : { var nextId : Nat },
-    productId : Nat,
+    appId : Text,
     metricType : Text,
     severity : Types.MetricSeverity,
     value : Nat,
@@ -70,7 +70,7 @@ module {
     state.nextId += 1;
     let alert : Types.Alert = {
       id;
-      productId;
+      appId;
       metricType;
       severity;
       value;
@@ -99,8 +99,8 @@ module {
       .toArray();
   };
 
-  public func listAlertHistory(alerts : List.List<Types.Alert>, productId : Nat) : [Types.AlertView] {
-    alerts.filter(func(a) { a.productId == productId })
+  public func listAlertHistory(alerts : List.List<Types.Alert>, appId : Text) : [Types.AlertView] {
+    alerts.filter(func(a) { a.appId == appId })
       .map<Types.Alert, Types.AlertView>(toAlertView)
       .toArray();
   };
