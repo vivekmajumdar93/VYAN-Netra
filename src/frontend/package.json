@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && pnpm copy:env",
+    "dev": "pnpm generate:version && vite",
+    "build": "pnpm generate:version && vite build && pnpm copy:env",
+    "generate:version": "node scripts/generate-version.mjs",
     "copy:env": "cp env.json dist/",
     "typecheck": "tsc --noEmit",
     "check": "biome check src",

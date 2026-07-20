@@ -79,6 +79,10 @@ export const ZohoStatusView = IDL.Record({
   'accountId' : IDL.Text,
   'fromAddress' : IDL.Text,
 });
+export const KillSwitchView = IDL.Record({
+  'enabled' : IDL.Bool,
+  'updatedAt' : Timestamp,
+});
 export const IssueId = IDL.Nat;
 export const IssueComment = IDL.Record({
   'id' : Id,
@@ -251,6 +255,7 @@ export const idlService = IDL.Service({
   'deleteEmailTemplate' : IDL.Func([IDL.Nat], [], []),
   'dismissNotification' : IDL.Func([IDL.Nat], [], []),
   'getApp' : IDL.Func([IDL.Text], [IDL.Opt(AppView)], ['query']),
+  'getKillSwitch' : IDL.Func([], [KillSwitchView], ['query']),
   'getLatestMetrics' : IDL.Func(
       [IDL.Text],
       [IDL.Opt(SystemMetrics)],
@@ -336,6 +341,7 @@ export const idlService = IDL.Service({
     ),
   'setAppBaseUrl' : IDL.Func([IDL.Text, IDL.Text], [AppView], []),
   'setAppManualStatus' : IDL.Func([IDL.Text, AppStatus], [AppView], []),
+  'setKillSwitch' : IDL.Func([IDL.Bool], [KillSwitchView], []),
   'setZohoConfig' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'snoozeNotification' : IDL.Func([IDL.Nat, Time], [], []),
   'submitMetrics' : IDL.Func(
@@ -442,6 +448,10 @@ export const idlFactory = ({ IDL }) => {
     'configured' : IDL.Bool,
     'accountId' : IDL.Text,
     'fromAddress' : IDL.Text,
+  });
+  const KillSwitchView = IDL.Record({
+    'enabled' : IDL.Bool,
+    'updatedAt' : Timestamp,
   });
   const IssueId = IDL.Nat;
   const IssueComment = IDL.Record({
@@ -615,6 +625,7 @@ export const idlFactory = ({ IDL }) => {
     'deleteEmailTemplate' : IDL.Func([IDL.Nat], [], []),
     'dismissNotification' : IDL.Func([IDL.Nat], [], []),
     'getApp' : IDL.Func([IDL.Text], [IDL.Opt(AppView)], ['query']),
+    'getKillSwitch' : IDL.Func([], [KillSwitchView], ['query']),
     'getLatestMetrics' : IDL.Func(
         [IDL.Text],
         [IDL.Opt(SystemMetrics)],
@@ -704,6 +715,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'setAppBaseUrl' : IDL.Func([IDL.Text, IDL.Text], [AppView], []),
     'setAppManualStatus' : IDL.Func([IDL.Text, AppStatus], [AppView], []),
+    'setKillSwitch' : IDL.Func([IDL.Bool], [KillSwitchView], []),
     'setZohoConfig' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'snoozeNotification' : IDL.Func([IDL.Nat, Time], [], []),
     'submitMetrics' : IDL.Func(

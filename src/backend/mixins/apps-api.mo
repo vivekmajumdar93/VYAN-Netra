@@ -1,9 +1,11 @@
 import List "mo:core/List";
 import AppsLib "../lib/apps";
 import Types "../types/apps";
+import SettingsTypes "../types/settings";
 
 mixin (
   apps : List.List<Types.App>,
+  killSwitch : SettingsTypes.KillSwitch,
 ) {
 
   // Generates a fresh 6-char pairing code server-side and creates a
@@ -24,8 +26,11 @@ mixin (
 
   // Called by a linked app itself on a periodic interval (see the VYAN
   // Bridge protocol doc). Not gated by admin auth — the appCode IS the
-  // credential. Returns false if the code isn't recognized.
+  // credential. Returns false if the code isn't recognized, or if the
+  // console's kill switch is off (Settings) — no cross-app activity is
+  // processed while it's disabled.
   public func recordHeartbeat(appCode : Text) : async Bool {
+    if (not killSwitch.enabled) return false;
     AppsLib.recordHeartbeat(apps, appCode);
   };
 

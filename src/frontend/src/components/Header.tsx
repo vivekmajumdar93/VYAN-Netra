@@ -23,14 +23,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <header className="flex items-center justify-between px-6 py-3.5 border-b border-[rgba(91,157,255,0.12)] bg-[rgba(5,10,25,0.7)] backdrop-blur-xl flex-shrink-0">
-      {/* Left: logo + title */}
+      {/* Left: title */}
       <div className="flex items-center gap-3 min-w-0">
-        <img
-          src="/assets/images/vyan-logo.png"
-          alt="VYAN"
-          className="flex-shrink-0"
-          style={{ maxHeight: 32, width: "auto", objectFit: "contain" }}
-        />
         <div className="min-w-0">
           <h1 className="font-display text-xl font-semibold text-[#E8E8FF] tracking-tight truncate">
             {title}

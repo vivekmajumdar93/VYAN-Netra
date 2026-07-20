@@ -11,6 +11,7 @@ import {
   type IssueSeverity,
   type IssueStatus,
   type IssueView,
+  type KillSwitchView,
   type NotificationSeverity,
   type NotificationType,
   type NotificationView,
@@ -967,5 +968,34 @@ export function useSendEmailBatch() {
     },
     onSuccess: (_, vars) =>
       qc.invalidateQueries({ queryKey: ["email-logs", vars.appId] }),
+  });
+}
+
+// ── Kill switch ──────────────────────────────────────────────────────────
+// Console-wide gate on every outbound/cross-app action (email sends,
+// heartbeat processing, and — client-side — health checks). Defaults to
+// disabled on the backend, so nothing fires until an admin turns it on.
+export function useKillSwitch() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<KillSwitchView>({
+    queryKey: ["kill-switch"],
+    queryFn: async () => {
+      if (!actor) return { enabled: false, updatedAt: 0n };
+      return actor.getKillSwitch();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useSetKillSwitch() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.setKillSwitch(enabled);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["kill-switch"] }),
   });
 }

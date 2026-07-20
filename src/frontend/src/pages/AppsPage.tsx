@@ -8,6 +8,7 @@ import {
   type AppViewUI,
   useApps,
   useCreateApp,
+  useKillSwitch,
   useRegenerateAppCode,
   useRemoveApp,
   useRenameApp,
@@ -25,6 +26,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Power,
   RadioTower,
   RefreshCw,
   Trash2,
@@ -243,7 +245,15 @@ function NewAppCodeBanner({
 }
 
 // ── App card ─────────────────────────────────────────────────────────────────
-function AppCard({ app, index }: { app: AppViewUI; index: number }) {
+function AppCard({
+  app,
+  index,
+  actionsEnabled,
+}: {
+  app: AppViewUI;
+  index: number;
+  actionsEnabled: boolean;
+}) {
   const {
     connectionStatusMap,
     setConnectionStatus,
@@ -272,7 +282,13 @@ function AppCard({ app, index }: { app: AppViewUI; index: number }) {
 
   const handleTestConnection = useCallback(() => {
     const now = Date.now();
-    if (isTesting || now - lastTestRef.current < 2000 || !app.baseUrl) return;
+    if (
+      isTesting ||
+      now - lastTestRef.current < 2000 ||
+      !app.baseUrl ||
+      !actionsEnabled
+    )
+      return;
     if (testDebounceRef.current) clearTimeout(testDebounceRef.current);
     testDebounceRef.current = setTimeout(async () => {
       lastTestRef.current = Date.now();
@@ -296,7 +312,7 @@ function AppCard({ app, index }: { app: AppViewUI; index: number }) {
       else toast.warning(`${app.name} is unreachable`);
       setIsTesting(false);
     }, 50);
-  }, [app, isTesting, setConnectionStatus, setManualStatus]);
+  }, [app, isTesting, actionsEnabled, setConnectionStatus, setManualStatus]);
 
   async function handleSaveUrl() {
     if (!urlDraft.trim()) return;
@@ -488,13 +504,22 @@ function AppCard({ app, index }: { app: AppViewUI; index: number }) {
         <Button
           size="sm"
           onClick={handleTestConnection}
-          disabled={isTesting || !app.baseUrl}
+          disabled={isTesting || !app.baseUrl || !actionsEnabled}
+          title={
+            actionsEnabled
+              ? undefined
+              : "Blocked: console kill switch is off (Settings)"
+          }
           data-ocid={`apps.test.button.${index + 1}`}
           className="flex-1 text-[11px] font-mono h-8 bg-[rgba(91,157,255,0.1)] hover:bg-[rgba(91,157,255,0.18)] text-blue-300 border border-[rgba(91,157,255,0.25)] hover:border-[rgba(91,157,255,0.4)] transition-all duration-200"
         >
           {isTesting ? (
             <>
               <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Testing…
+            </>
+          ) : !actionsEnabled ? (
+            <>
+              <Power className="w-3 h-3 mr-1.5" /> Killed
             </>
           ) : (
             <>
@@ -525,12 +550,15 @@ function AppCard({ app, index }: { app: AppViewUI; index: number }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AppsPage() {
   const { data: apps = [], isLoading } = useApps();
+  const { data: killSwitch } = useKillSwitch();
+  const actionsEnabled = killSwitch?.enabled ?? false;
   const { connectionStatusMap, setConnectionStatus } = useAppRegistryContext();
   const [newApp, setNewApp] = useState<AppViewUI | null>(null);
   const [checkingAll, setCheckingAll] = useState(false);
   const setManualStatus = useSetAppManualStatus();
 
   async function handleCheckAll() {
+    if (!actionsEnabled) return;
     setCheckingAll(true);
     const withUrl = apps.filter((a) => a.baseUrl);
     await Promise.all(
@@ -600,13 +628,22 @@ export default function AppsPage() {
             size="sm"
             variant="outline"
             onClick={handleCheckAll}
-            disabled={checkingAll || apps.length === 0}
+            disabled={checkingAll || apps.length === 0 || !actionsEnabled}
+            title={
+              actionsEnabled
+                ? undefined
+                : "Blocked: console kill switch is off (Settings)"
+            }
             data-ocid="apps.check_all.button"
             className="h-7 text-[10px] font-mono border-[rgba(91,157,255,0.25)] text-blue-300 hover:bg-[rgba(91,157,255,0.1)]"
           >
             {checkingAll ? (
               <>
                 <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Checking…
+              </>
+            ) : !actionsEnabled ? (
+              <>
+                <Power className="w-3 h-3 mr-1.5" /> Killed
               </>
             ) : (
               <>
@@ -615,6 +652,21 @@ export default function AppsPage() {
             )}
           </Button>
         </div>
+
+        {!actionsEnabled && (
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-[10px] font-mono text-red-300"
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.2)",
+            }}
+            data-ocid="apps.killswitch.banner"
+          >
+            <Power className="w-3 h-3 flex-shrink-0" />
+            Console kill switch is off — health checks are blocked. Enable it in
+            Settings.
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -642,7 +694,12 @@ export default function AppsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {apps.map((app, i) => (
-              <AppCard key={app.id} app={app} index={i} />
+              <AppCard
+                key={app.id}
+                app={app}
+                index={i}
+                actionsEnabled={actionsEnabled}
+              />
             ))}
           </div>
         )}

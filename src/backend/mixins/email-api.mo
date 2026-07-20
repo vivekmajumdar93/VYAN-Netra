@@ -2,6 +2,7 @@ import List "mo:core/List";
 import EmailLib "../lib/email";
 import Types "../types/email";
 import HttpTypes "../types/http";
+import SettingsTypes "../types/settings";
 
 mixin (
   emailConfigs : List.List<Types.EmailConfig>,
@@ -11,6 +12,7 @@ mixin (
   emailLogState : { var nextId : Nat },
   emailTemplateState : { var nextId : Nat },
   zoho : Types.ZohoConfig,
+  killSwitch : SettingsTypes.KillSwitch,
 ) {
 
   public func createEmailConfig(
@@ -91,6 +93,9 @@ mixin (
   // (frontend) into a list of addresses; this sends to one address at a
   // time so a partial failure doesn't lose the rest of the batch.
   public func sendEmailNow(appId : Text, recipient : Text, subject : Text, body : Text) : async Types.EmailLog {
+    if (not killSwitch.enabled) {
+      return EmailLib.addEmailLog(emailLogs, emailLogState, appId, recipient, subject, #failed, "Blocked: console kill switch is off (Settings)");
+    };
     if (zoho.accountId == "" or zoho.accessToken == "") {
       return EmailLib.addEmailLog(emailLogs, emailLogState, appId, recipient, subject, #failed, "Zoho is not configured in Settings");
     };

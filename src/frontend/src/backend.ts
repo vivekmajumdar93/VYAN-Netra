@@ -31,6 +31,7 @@ export type {
   IssueComment,
   IssueId,
   IssueView,
+  KillSwitchView,
   NotificationView,
   SystemMetrics,
   Time,

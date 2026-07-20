@@ -74,6 +74,10 @@ export interface ZohoStatusView {
   'accountId' : string,
   'fromAddress' : string,
 }
+export interface KillSwitchView {
+  'enabled' : boolean,
+  'updatedAt' : Timestamp,
+}
 export type Id = bigint;
 export interface IssueComment {
   'id' : Id,
@@ -209,6 +213,7 @@ export interface _SERVICE {
   'deleteEmailTemplate' : ActorMethod<[bigint], undefined>,
   'dismissNotification' : ActorMethod<[bigint], undefined>,
   'getApp' : ActorMethod<[string], [] | [AppView]>,
+  'getKillSwitch' : ActorMethod<[], KillSwitchView>,
   'getLatestMetrics' : ActorMethod<[string], [] | [SystemMetrics]>,
   'getMetricsHistory' : ActorMethod<[string], Array<SystemMetrics>>,
   'getUserStatusForApp' : ActorMethod<[string, string], [] | [UserStatus]>,
@@ -258,6 +263,7 @@ export interface _SERVICE {
   'sendEmailNow' : ActorMethod<[string, string, string, string], EmailLog>,
   'setAppBaseUrl' : ActorMethod<[string, string], AppView>,
   'setAppManualStatus' : ActorMethod<[string, AppStatus], AppView>,
+  'setKillSwitch' : ActorMethod<[boolean], KillSwitchView>,
   'setZohoConfig' : ActorMethod<[string, string, string], undefined>,
   'snoozeNotification' : ActorMethod<[bigint, Time], undefined>,
   'submitMetrics' : ActorMethod<

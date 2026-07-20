@@ -3,18 +3,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useSetZohoConfig, useZohoStatus } from "@/hooks/use-backend";
+import {
+  useKillSwitch,
+  useSetKillSwitch,
+  useSetZohoConfig,
+  useZohoStatus,
+} from "@/hooks/use-backend";
+import { useVersionHistory } from "@/hooks/use-version-history";
 import { useVyanAuth } from "@/hooks/use-vyan-auth";
 import {
   Activity,
   AtSign,
   CheckCircle2,
   ExternalLink,
+  GitCommitHorizontal,
   Info,
   Link2,
   LogOut,
   Mail,
   Palette,
+  Power,
   Shield,
   Sparkles,
   User,
@@ -125,6 +133,138 @@ function ZohoConfigForm() {
           {setZoho.isPending ? "Saving…" : "Save Zoho Config"}
         </Button>
       </form>
+    </div>
+  );
+}
+
+// ── Kill Switch ──────────────────────────────────────────────────────────
+function KillSwitchSection() {
+  const { data: killSwitch } = useKillSwitch();
+  const setKillSwitch = useSetKillSwitch();
+  const enabled = killSwitch?.enabled ?? false;
+
+  async function handleToggle(next: boolean) {
+    try {
+      await setKillSwitch.mutateAsync(next);
+      toast.success(
+        next
+          ? "Console is LIVE — outbound actions enabled"
+          : "Console is KILLED — all outbound actions blocked",
+      );
+    } catch {
+      toast.error("Failed to update the kill switch");
+    }
+  }
+
+  const updatedAt =
+    killSwitch && killSwitch.updatedAt > 0n
+      ? new Date(Number(killSwitch.updatedAt) / 1_000_000).toLocaleString()
+      : null;
+
+  return (
+    <div className="py-3">
+      <div
+        className="rounded-xl p-4 flex items-center justify-between gap-4"
+        style={{
+          background: enabled
+            ? "rgba(52,211,153,0.08)"
+            : "rgba(239,68,68,0.08)",
+          border: `1px solid ${enabled ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
+        }}
+      >
+        <div className="flex items-start gap-3 min-w-0">
+          <Power
+            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${enabled ? "text-emerald-400" : "text-red-400"}`}
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-body font-semibold text-[#E8E8FF]">
+              {enabled
+                ? "LIVE — outbound actions enabled"
+                : "KILLED — all outbound actions blocked"}
+            </p>
+            <p className="text-[10px] font-mono text-[rgba(232,232,255,0.4)] mt-1 leading-relaxed">
+              Gates email sends, heartbeat processing from connected apps, and
+              health checks console-wide — regardless of any individual app's
+              state. Defaults to KILLED: nothing that can incur cost or contact
+              another app runs until you flip this on.
+            </p>
+            {updatedAt && (
+              <p className="text-[9px] font-mono text-[rgba(232,232,255,0.25)] mt-1.5">
+                Last changed {updatedAt}
+              </p>
+            )}
+          </div>
+        </div>
+        <Switch
+          checked={enabled}
+          onCheckedChange={handleToggle}
+          disabled={setKillSwitch.isPending}
+          data-ocid="settings.killswitch.switch"
+          className="flex-shrink-0"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Version History ──────────────────────────────────────────────────────
+function VersionHistorySection() {
+  const { data, isLoading } = useVersionHistory();
+
+  if (isLoading) {
+    return (
+      <p className="py-4 text-xs font-mono text-[rgba(232,232,255,0.35)]">
+        Loading version history…
+      </p>
+    );
+  }
+
+  if (!data || data.commits.length === 0) {
+    return (
+      <p className="py-4 text-xs font-mono text-[rgba(232,232,255,0.35)]">
+        No version history available for this build.
+      </p>
+    );
+  }
+
+  return (
+    <div className="py-3">
+      <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] leading-relaxed mb-3">
+        Every push to <span className="text-[rgba(232,232,255,0.6)]">main</span>{" "}
+        is a new deployable version. To roll back, redeploy an earlier commit
+        from Vercel's Deployments tab, or{" "}
+        <code className="text-[rgba(232,232,255,0.6)]">git revert</code> on main
+        and push.
+      </p>
+      <div className="space-y-0.5 divide-y divide-[rgba(91,157,255,0.07)]">
+        {data.commits.map((c, i) => (
+          <div key={c.hash} className="flex items-start gap-3 py-2.5">
+            <GitCommitHorizontal className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#E8E8FF] truncate">
+                  {c.message}
+                </span>
+                {i === 0 && (
+                  <span
+                    className="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: "rgba(52,211,153,0.1)",
+                      color: "#34D399",
+                      border: "1px solid rgba(52,211,153,0.2)",
+                    }}
+                  >
+                    current
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mt-0.5">
+                {c.short} · {new Date(c.date).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -326,12 +466,22 @@ export default function SettingsPage() {
           </div>
         </Section>
 
+        {/* ── Kill Switch ── */}
+        <Section
+          icon={<Power className="w-3.5 h-3.5" />}
+          title="Kill Switch"
+          ocid="settings.killswitch.section"
+          index={1}
+        >
+          <KillSwitchSection />
+        </Section>
+
         {/* ── Monitoring ── */}
         <Section
           icon={<Activity className="w-3.5 h-3.5" />}
           title="Monitoring"
           ocid="settings.monitoring.section"
-          index={1}
+          index={2}
         >
           <SettingRow
             label="Auto-Refresh Metrics"
@@ -365,7 +515,7 @@ export default function SettingsPage() {
           icon={<Palette className="w-3.5 h-3.5" />}
           title="Display"
           ocid="settings.display.section"
-          index={2}
+          index={3}
         >
           <SettingRow
             label="Nano-Particle Animation"
@@ -399,7 +549,7 @@ export default function SettingsPage() {
           icon={<Shield className="w-3.5 h-3.5" />}
           title="VYAN Security"
           ocid="settings.security.section"
-          index={3}
+          index={4}
         >
           <div className="py-3">
             <div
@@ -429,7 +579,7 @@ export default function SettingsPage() {
           icon={<Link2 className="w-3.5 h-3.5" />}
           title="Linked Applications"
           ocid="settings.linked_apps.section"
-          index={4}
+          index={5}
         >
           <div className="py-3">
             <div
@@ -469,9 +619,19 @@ export default function SettingsPage() {
           icon={<Mail className="w-3.5 h-3.5" />}
           title="Zoho Email"
           ocid="settings.zoho.section"
-          index={5}
+          index={6}
         >
           <ZohoConfigForm />
+        </Section>
+
+        {/* ── Version History ── */}
+        <Section
+          icon={<GitCommitHorizontal className="w-3.5 h-3.5" />}
+          title="Version History"
+          ocid="settings.version_history.section"
+          index={7}
+        >
+          <VersionHistorySection />
         </Section>
 
         {/* ── About ── */}
@@ -479,7 +639,7 @@ export default function SettingsPage() {
           icon={<Info className="w-3.5 h-3.5" />}
           title="About"
           ocid="settings.about.section"
-          index={6}
+          index={8}
         >
           <div className="py-1">
             {/* VYAN Netra brand block */}

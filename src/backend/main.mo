@@ -6,6 +6,7 @@ import NotifTypes "types/notifications";
 import IssueTypes "types/issues";
 import UpdateTypes "types/updates";
 import EmailTypes "types/email";
+import SettingsTypes "types/settings";
 import AppsMixin "mixins/apps-api";
 import UsersMixin "mixins/users-api";
 import MonitoringMixin "mixins/monitoring-api";
@@ -13,6 +14,7 @@ import NotifsMixin "mixins/notifications-api";
 import IssuesMixin "mixins/issues-api";
 import UpdatesMixin "mixins/updates-api";
 import EmailMixin "mixins/email-api";
+import SettingsMixin "mixins/settings-api";
 
 actor {
   // Apps — the single registry of every VYAN app connected to this console
@@ -58,11 +60,20 @@ actor {
     var fromAddress = "";
   };
 
-  include AppsMixin(apps);
+  // Global kill switch. Starts OFF: no outbound action (email sends,
+  // heartbeat processing) runs until an admin explicitly enables it in
+  // Settings — keeps the console at zero external cost/contact by default.
+  let killSwitch : SettingsTypes.KillSwitch = {
+    var enabled = false;
+    var updatedAt = 0;
+  };
+
+  include AppsMixin(apps, killSwitch);
   include UsersMixin(users, activities, userState, activityState, apps);
   include MonitoringMixin(metrics, alerts, metricsState, alertsState);
   include NotifsMixin(notifications, notifState);
   include IssuesMixin(issues, comments, issueState, commentState);
   include UpdatesMixin(updates, updateState);
-  include EmailMixin(emailConfigs, emailLogs, emailTemplates, emailConfigState, emailLogState, emailTemplateState, zohoConfig);
+  include EmailMixin(emailConfigs, emailLogs, emailTemplates, emailConfigState, emailLogState, emailTemplateState, zohoConfig, killSwitch);
+  include SettingsMixin(killSwitch);
 };
