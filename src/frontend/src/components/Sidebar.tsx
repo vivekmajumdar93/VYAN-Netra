@@ -69,7 +69,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-[rgba(91,157,255,0.12)]">
         <img
-          src="https://raw.githubusercontent.com/vivekmajumdar93/VYAN-Technologies-Logo/main/IMG_9695.png"
+          src="/assets/images/vyan-logo.png"
           alt="VYAN"
           className="flex-shrink-0"
           style={{ maxHeight: 40, width: "auto", objectFit: "contain" }}

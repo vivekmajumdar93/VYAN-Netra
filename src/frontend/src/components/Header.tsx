@@ -26,7 +26,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
       {/* Left: logo + title */}
       <div className="flex items-center gap-3 min-w-0">
         <img
-          src="https://raw.githubusercontent.com/vivekmajumdar93/VYAN-Technologies-Logo/main/IMG_9695.png"
+          src="/assets/images/vyan-logo.png"
           alt="VYAN"
           className="flex-shrink-0"
           style={{ maxHeight: 32, width: "auto", objectFit: "contain" }}

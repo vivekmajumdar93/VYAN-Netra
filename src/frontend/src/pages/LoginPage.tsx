@@ -68,7 +68,7 @@ export default function LoginPage() {
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 opacity-20 blur-2xl" />
             <img
-              src="https://raw.githubusercontent.com/vivekmajumdar93/VYAN-Technologies-Logo/main/IMG_9695.png"
+              src="/assets/images/vyan-logo.png"
               alt="VYAN"
               style={{
                 maxWidth: 140,
