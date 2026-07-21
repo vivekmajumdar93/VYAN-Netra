@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "systemMetrics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "appId", "order": "ASCENDING" },
+        { "fieldPath": "id", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

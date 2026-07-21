@@ -1,17 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RECOGNIZED_ADMINS, useVyanAuth } from "@/hooks/use-vyan-auth";
-import { Fingerprint, Shield } from "lucide-react";
+import { Fingerprint, Loader2, Shield } from "lucide-react";
 import { useState } from "react";
 
 export default function LoginPage() {
   const { login } = useVyanAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const ok = login(email.trim());
+    setIsSubmitting(true);
+    const ok = await login(email.trim());
+    setIsSubmitting(false);
     if (!ok) {
       setError("That email isn't on the VYAN admin allowlist.");
     }
@@ -177,10 +180,15 @@ export default function LoginPage() {
 
           <Button
             type="submit"
+            disabled={isSubmitting}
             className="w-full h-11 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white border-0 font-display tracking-wide text-sm shadow-[0_0_24px_rgba(91,157,255,0.35)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(91,157,255,0.5)]"
             data-ocid="login.admin_access.button"
           >
-            <Fingerprint className="w-4 h-4 mr-2" />
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Fingerprint className="w-4 h-4 mr-2" />
+            )}
             Admin Access
           </Button>
 

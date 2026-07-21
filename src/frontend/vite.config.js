@@ -1,11 +1,6 @@
 import { fileURLToPath, URL } from "url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import environment from "vite-plugin-environment";
-
-// Firebase integration will be linked here by VYAN
-process.env.STORAGE_GATEWAY_URL =
-  process.env.STORAGE_GATEWAY_URL || "https://blob.caffeine.ai";
 
 export default defineConfig({
   logLevel: "error",
@@ -17,27 +12,7 @@ export default defineConfig({
   css: {
     postcss: "./postcss.config.js",
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: "globalThis",
-      },
-    },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:4943",
-        changeOrigin: true,
-      },
-    },
-  },
-  plugins: [
-    environment("all", { prefix: "CANISTER_" }),
-    environment("all", { prefix: "DFX_" }),
-    environment(["STORAGE_GATEWAY_URL"]),
-    react(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: [
       {
@@ -49,6 +24,5 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src", import.meta.url)),
       },
     ],
-    dedupe: ["@dfinity/agent"]
   },
 });

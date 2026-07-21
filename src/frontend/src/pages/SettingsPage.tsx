@@ -76,10 +76,10 @@ function ZohoConfigForm() {
         </div>
       )}
       <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] leading-relaxed">
-        Netra sends real email through Zoho's Mail API (an HTTPS outcall — not
-        raw SMTP, which a canister can't speak). The access token is write-only:
-        once saved, it's never returned to the browser again. Zoho tokens expire
-        periodically — re-paste a fresh one here when sends start failing.
+        Netra sends real email through Zoho's Mail API (HTTPS) from a Cloud
+        Function. The access token is write-only: once saved, it's never
+        returned to the browser again. Zoho tokens expire periodically —
+        re-paste a fresh one here when sends start failing.
       </p>
       <form onSubmit={handleSave} className="space-y-3">
         <div className="space-y-1.5">

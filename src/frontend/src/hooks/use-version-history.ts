@@ -14,8 +14,8 @@ export interface VersionHistoryData {
 }
 
 // Reads the static public/version-history.json snapshot generated at build
-// time (scripts/generate-version.mjs) — not a backend/canister call, so it
-// costs nothing and works even before any canister is deployed.
+// time (scripts/generate-version.mjs) — not a backend call, so it costs
+// nothing and works even before the Firebase backend is deployed.
 export function useVersionHistory() {
   return useQuery<VersionHistoryData>({
     queryKey: ["version-history"],

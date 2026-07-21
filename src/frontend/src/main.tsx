@@ -1,17 +1,17 @@
-import { InternetIdentityProvider } from "@caffeineai/core-infrastructure";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { AppRegistryProvider } from "./context/app-context";
+import { getFirebaseAuth } from "./firebase";
 import {
   VyanAuthContext,
   type VyanUser,
-  clearStoredUser,
-  findRecognizedAdmin,
-  loadStoredUser,
-  storeUser,
+  requestAdminTokenAndSignIn,
+  signOut,
+  userFromFirebaseUser,
 } from "./hooks/use-vyan-auth";
 
 BigInt.prototype.toJSON = function () {
@@ -26,34 +26,36 @@ declare global {
 
 const queryClient = new QueryClient();
 
-// NOTE: this only gates the console's own UI, client-side — there is no
-// backend session/identity check yet, so canister update calls made after
-// login are not themselves authenticated. Real caller-based authorization
-// (Internet Identity + a checked admin Principal allowlist on the backend)
-// is a separate, larger piece of work; this just stops the front door from
-// accepting an arbitrary typed email the way it used to.
+// Caller-based authorization: every request the console makes now carries
+// a real Firebase ID token from the signed-in admin (Cloud Functions can
+// check request.auth), not just a client-side localStorage flag. Session
+// persistence is handled by the Firebase Auth SDK itself — no manual
+// storage code needed here.
 function VyanAuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<VyanUser | null>(() =>
-    loadStoredUser(),
-  );
+  const [currentUser, setCurrentUser] = useState<VyanUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  function login(email: string): boolean {
-    const known = findRecognizedAdmin(email);
-    if (!known) return false;
-    storeUser(known);
-    setCurrentUser(known);
-    return true;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
+      setCurrentUser(user ? await userFromFirebaseUser(user) : null);
+      setIsLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  async function login(email: string): Promise<boolean> {
+    return requestAdminTokenAndSignIn(email);
   }
 
   function logout() {
-    clearStoredUser();
-    setCurrentUser(null);
+    void signOut();
   }
 
   return (
     <VyanAuthContext.Provider
       value={{
         isAuthenticated: currentUser !== null,
+        isLoading,
         currentUser,
         login,
         logout,
@@ -66,12 +68,10 @@ function VyanAuthProvider({ children }: { children: React.ReactNode }) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <InternetIdentityProvider>
-      <VyanAuthProvider>
-        <AppRegistryProvider>
-          <App />
-        </AppRegistryProvider>
-      </VyanAuthProvider>
-    </InternetIdentityProvider>
+    <VyanAuthProvider>
+      <AppRegistryProvider>
+        <App />
+      </AppRegistryProvider>
+    </VyanAuthProvider>
   </QueryClientProvider>,
 );

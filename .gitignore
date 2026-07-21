@@ -1,8 +1,15 @@
 node_modules/
 dist/
-.mops/
+lib/
 .old/
 .platform/
 .pnpm-store/
 .cache/
 src/frontend/public/version-history.json
+.env
+.env.local
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+*.local

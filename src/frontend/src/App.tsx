@@ -131,7 +131,17 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
-  const { isAuthenticated } = useVyanAuth();
+  const { isAuthenticated, isLoading } = useVyanAuth();
+  if (isLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#000" }}
+      >
+        <div className="w-8 h-8 rounded-full border-2 border-[rgba(91,157,255,0.3)] border-t-blue-400 animate-spin" />
+      </div>
+    );
+  }
   if (!isAuthenticated) return <LoginPage />;
   return <RouterProvider router={router} />;
 }

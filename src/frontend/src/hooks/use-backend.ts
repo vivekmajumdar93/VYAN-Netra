@@ -30,12 +30,17 @@ import {
   toOpt,
   toVariant,
 } from "@/backend";
-import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// Firebase integration will be linked here by VYAN
+import { useMemo } from "react";
 
+// The Firebase-backed actor (backend.ts) has no async identity/handshake
+// step the way the old ICP useActor did, so construction is synchronous —
+// isFetching stays false. Kept as a hook (rather than a module-level
+// singleton) so it participates in React's lifecycle the same way the
+// rest of this file already assumes.
 function useBackendActor() {
-  return useActor(createActor);
+  const actor = useMemo(() => createActor(), []);
+  return { actor, isFetching: false };
 }
 
 // ── UI-friendly view types (variant fields converted to string enums) ──────

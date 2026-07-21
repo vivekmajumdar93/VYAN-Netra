@@ -2,15 +2,22 @@
 
 // @ts-nocheck
 
-// Hand-written to match the current Motoko backend interface.
-// The original bindgen pipeline (`pnpm bindgen`) requires network access to
-// build the canister and regenerate this file — unavailable in the sandbox
-// this was authored in. Regenerate for real via `pnpm bindgen` once you can
-// build the backend, and diff against this file before trusting either.
+// The stable data-access contract between the frontend and whatever backend
+// is behind it. Originally generated (by hand) from the ICP/Motoko
+// canister's candid interface; now implemented by Firebase Cloud Functions
+// instead (see src/backend.ts + functions/src/domains/*.ts) — the shapes
+// below are kept byte-for-byte identical on purpose, so this migration
+// never had to touch hooks/use-backend.ts or any page/component. Swapping
+// the backend again in the future only requires a new implementation of
+// `_SERVICE`, same as this one did.
 
-import type { ActorMethod } from '@icp-sdk/core/agent';
-import type { IDL } from '@icp-sdk/core/candid';
-import type { Principal } from '@icp-sdk/core/principal';
+// Candid actors originally typed every method as `(...args) => Promise<Ret>`
+// via @icp-sdk/core's ActorMethod; redefined locally now that there's no
+// candid/ICP dependency left in the frontend.
+export type ActorMethod<
+  Args extends unknown[] = unknown[],
+  Ret = unknown,
+> = (...args: Args) => Promise<Ret>;
 
 export type ActivityEventType = { 'action' : null } |
   { 'login' : null } |
@@ -285,7 +292,3 @@ export interface _SERVICE {
   >,
   'updateUserRole' : ActorMethod<[bigint, UserRole], undefined>,
 }
-export declare const idlService: IDL.ServiceClass;
-export declare const idlInitArgs: IDL.Type[];
-export declare const idlFactory: IDL.InterfaceFactory;
-export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
