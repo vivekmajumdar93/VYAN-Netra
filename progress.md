@@ -65,9 +65,20 @@ Firebase project, then deploying for real.**
 
 Steps (check off as completed):
 
-- [ ] Get the real project ID from the user.
-- [ ] Authenticate the CLI in this sandbox (interactive device-code login
-      — user opens a URL, pastes back a code).
+- [x] Get the real project ID from the user. — **blocked, see below**
+- [x] ~~Authenticate the CLI in this sandbox (interactive device-code
+      login)~~ — **tried, doesn't work in this sandbox.**
+      `firebase login` (and `login:ci`) call out to
+      `auth.firebase.tools`, which this sandbox's network policy blocks
+      outright (403 on CONNECT). Confirmed core Google/Firebase API
+      domains (`www.googleapis.com`, `firestore.googleapis.com`,
+      `cloudfunctions.googleapis.com`, `oauth2.googleapis.com`, etc.)
+      *are* reachable — only the CLI's own OAuth-relay domain is
+      blocked. **Switching to a service account key instead**, which
+      authenticates directly against those reachable domains and never
+      touches `auth.firebase.tools`.
+- [ ] Get a service account key (JSON) from the user, scoped to their
+      project, and the project id.
 - [ ] `firebase use <project-id>` — point `.firebaserc` at the real
       project (currently a `REPLACE_WITH_YOUR_FIREBASE_PROJECT_ID`
       placeholder).
@@ -88,6 +99,17 @@ existing repo config at that existing project and pushing the code live.
 
 ## Change Log (most recent first)
 
+- 2026-07-22: Tried interactive device-code login (`firebase login
+  --no-localhost` via a tmux pty, since it also refuses to run without a
+  real tty). Got past the Gemini-in-Firebase and telemetry prompts
+  (declined both — not something to opt the user into without asking),
+  then hit `Error: Failed to make request to https://auth.firebase.tools/attest`.
+  Confirmed via curl that `auth.firebase.tools` and
+  `firebase-public.firebaseio.com` are hard-blocked by this sandbox's
+  network policy (403 on CONNECT), while `*.googleapis.com` domains
+  (the ones a service-account deploy actually needs) are reachable.
+  Pivoting to requesting a service account key from the user instead of
+  interactive login.
 - 2026-07-22: Created this file. Starting real-project alignment + deploy
   at the user's request (screenshot instruction: baby steps, device-code
   login, progress file must be read-before/updated-after every change).
