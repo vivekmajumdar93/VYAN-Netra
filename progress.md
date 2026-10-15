@@ -99,6 +99,15 @@ existing repo config at that existing project and pushing the code live.
 
 ## Change Log (most recent first)
 
+- 2026-10-15: User flagged that a description of the repo (ICP/Motoko,
+  mops.toml, caffeine.toml, @dfinity/@icp-sdk, canister-call
+  BRIDGE-PROTOCOL.md) still matched. Confirmed why: **the Firebase
+  migration was only ever pushed to the `claude/repo-comparison-code-review-154diw`
+  branch, never merged to `main`** — `main` still has the pre-migration
+  ICP scaffolding untouched. Also found and removed one straggler the
+  original cleanup missed: `src/frontend/caffeine.toml` (a Caffeine
+  platform build manifest, not ICP-specific, but dead now that we're off
+  that platform). Asked the user whether to merge the branch into `main`.
 - 2026-07-22: Tried interactive device-code login (`firebase login
   --no-localhost` via a tmux pty, since it also refuses to run without a
   real tty). Got past the Gemini-in-Firebase and telemetry prompts
