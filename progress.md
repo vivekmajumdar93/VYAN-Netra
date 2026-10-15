@@ -99,6 +99,16 @@ existing repo config at that existing project and pushing the code live.
 
 ## Change Log (most recent first)
 
+- 2026-10-15: **Merged `claude/repo-comparison-code-review-154diw` into
+  `main`** (user's explicit go-ahead) — clean fast-forward, no
+  conflicts, no divergence. Also removed one more stray tracked file
+  the cleanup missed: `.old/src/backend/dist/backend.most` (a compiled
+  Motoko artifact that predated `.old/` being gitignored). `main` is
+  now fully clean of ICP/Motoko/caffeine residue — verified by
+  `git ls-tree` on `origin/main` and a full reinstall + typecheck +
+  build of both `src/frontend` and `functions` on `main`, all passing.
+  `main` is now the live source of truth; the feature branch can be
+  considered merged/done.
 - 2026-10-15: User flagged that a description of the repo (ICP/Motoko,
   mops.toml, caffeine.toml, @dfinity/@icp-sdk, canister-call
   BRIDGE-PROTOCOL.md) still matched. Confirmed why: **the Firebase
