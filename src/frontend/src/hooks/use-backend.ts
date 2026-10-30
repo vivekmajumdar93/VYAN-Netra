@@ -3,6 +3,8 @@ import {
   type AlertView,
   type AppStatus,
   type AppView,
+  type CommandPayload,
+  type CommandView,
   type EmailConfigView,
   type EmailLog,
   type EmailStatus,
@@ -235,6 +237,36 @@ export function useRemoveApp() {
       return actor.removeApp(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
+  });
+}
+
+// ── Commands ─────────────────────────────────────────────────────────────────
+// CommandPayload/CommandView are already plain JSON (see the comment on
+// CommandPayload in declarations/backend.did.d.ts) — no fromVariant/fromOpt
+// mapping needed, unlike AppView/UserView above.
+export function useCommandHistory(appId: string) {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["commands", appId],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listCommandHistory(appId);
+    },
+    enabled: !!actor && !isFetching && !!appId,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useIssueCommand() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { appId: string; payload: CommandPayload }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.issueCommand(args.appId, args.payload) as Promise<CommandView>;
+    },
+    onSuccess: (_result, args) =>
+      qc.invalidateQueries({ queryKey: ["commands", args.appId] }),
   });
 }
 

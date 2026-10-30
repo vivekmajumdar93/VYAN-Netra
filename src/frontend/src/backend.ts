@@ -16,12 +16,15 @@
 
 import { httpsCallable, type Functions } from "firebase/functions";
 import { getFirebaseFunctions } from "./firebase";
-import type { _SERVICE } from "./declarations/backend.did";
+import type { _SERVICE, CommandPayload, CommandView } from "./declarations/backend.did";
 
 export type {
   AppId,
   AppView,
   AlertView,
+  CommandPayload,
+  CommandStatus,
+  CommandView,
   EmailConfigId,
   EmailConfigView,
   EmailLog,
@@ -489,6 +492,23 @@ export function createActor(): _SERVICE {
       const w = await call<{ enabled: boolean }, WireKillSwitch>(functions, "setKillSwitch")({ enabled });
       return unwireKillSwitch(w) as any;
     },
+
+    // ── Commands ──────────────────────────────────────────────────────
+    // payload/CommandView are already plain JSON on both sides (new
+    // domain, no legacy candid shape to translate to/from — see the
+    // comment on CommandPayload in declarations/backend.did.d.ts), so
+    // these pass straight through with no wire/unwire step.
+    issueCommand: async (appId, payload) =>
+      call<{ appId: string; payload: CommandPayload }, CommandView>(functions, "issueCommand")({ appId, payload }),
+    getPendingCommands: async (appCode) =>
+      call<{ appCode: string }, CommandView[]>(functions, "getPendingCommands")({ appCode }),
+    acknowledgeCommand: async (appCode, id, success, result) =>
+      call<
+        { appCode: string; id: number; success: boolean; result: string },
+        boolean
+      >(functions, "acknowledgeCommand")({ appCode, id, success, result }),
+    listCommandHistory: async (appId) =>
+      call<{ appId: string }, CommandView[]>(functions, "listCommandHistory")({ appId }),
 
     // ── Users ─────────────────────────────────────────────────────────
     createUser: async (appId, name, email, role) => {

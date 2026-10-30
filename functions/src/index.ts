@@ -21,6 +21,13 @@ export {
 
 export { getKillSwitch, setKillSwitch } from "./domains/settings.js";
 
+export {
+  issueCommand,
+  getPendingCommands,
+  acknowledgeCommand,
+  listCommandHistory,
+} from "./domains/commands.js";
+
 export { requestAdminToken } from "./domains/auth.js";
 
 export {

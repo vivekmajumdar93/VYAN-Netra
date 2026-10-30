@@ -190,8 +190,41 @@ export interface UserView {
   'role' : UserRole,
   'email' : string,
 }
+// New domain (commands) — no legacy Motoko/Candid counterpart to stay
+// byte-for-byte compatible with, unlike everything above. Plain JSON
+// shapes (no bigint ids/timestamps, no `[] | [T]` optionals, no
+// `{tag: null}` variants) since there's no prior wire format to match —
+// see BRIDGE-PROTOCOL.md and functions/src/domains/commands.ts.
+export type CommandPayload =
+  | { type : 'setKillSwitch'; armed : boolean }
+  | { type : 'setMode'; mode : string }
+  | { type : 'emergencyHalt' }
+  | { type : 'clearEmergencyHalt' }
+  | {
+      type : 'updateRiskPolicy';
+      dailyLossLimit? : number;
+      maxTradesPerDay? : number;
+      maxOpenPositions? : number;
+      positionSizeLimit? : number;
+      capitalAllocationPct? : number;
+      totalCapital? : number;
+    }
+  | { type : 'unlockUser'; externalId : string }
+  | { type : 'triggerScan' };
+export type CommandStatus = 'pending' | 'acknowledged' | 'failed';
+export interface CommandView {
+  id : number;
+  appId : string;
+  payload : CommandPayload;
+  status : CommandStatus;
+  result : string | null;
+  issuedAt : number;
+  completedAt : number | null;
+}
+
 export interface _SERVICE {
   'acceptUser' : ActorMethod<[bigint], undefined>,
+  'acknowledgeCommand' : ActorMethod<[string, number, boolean, string], boolean>,
   'addIssueComment' : ActorMethod<[bigint, string, bigint], IssueComment>,
   'createAlert' : ActorMethod<
     [string, string, MetricSeverity, bigint, bigint],
@@ -223,14 +256,17 @@ export interface _SERVICE {
   'getKillSwitch' : ActorMethod<[], KillSwitchView>,
   'getLatestMetrics' : ActorMethod<[string], [] | [SystemMetrics]>,
   'getMetricsHistory' : ActorMethod<[string], Array<SystemMetrics>>,
+  'getPendingCommands' : ActorMethod<[string], Array<CommandView>>,
   'getUserStatusForApp' : ActorMethod<[string, string], [] | [UserStatus]>,
   'getZohoStatus' : ActorMethod<[], ZohoStatusView>,
   'holdUser' : ActorMethod<[bigint], undefined>,
+  'issueCommand' : ActorMethod<[string, CommandPayload], CommandView>,
   'listActiveAlerts' : ActorMethod<[], Array<AlertView>>,
   'listAlertHistory' : ActorMethod<[string], Array<AlertView>>,
   'listAllUpdates' : ActorMethod<[], Array<UpdateView>>,
   'listAppUpdates' : ActorMethod<[string], Array<UpdateView>>,
   'listApps' : ActorMethod<[], Array<AppView>>,
+  'listCommandHistory' : ActorMethod<[string], Array<CommandView>>,
   'listEmailConfigs' : ActorMethod<[string], Array<EmailConfigView>>,
   'listEmailLogs' : ActorMethod<[string], Array<EmailLog>>,
   'listEmailTemplates' : ActorMethod<[string], Array<EmailTemplateView>>,

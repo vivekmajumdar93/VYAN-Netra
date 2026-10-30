@@ -1,4 +1,4 @@
-import { AppStatus } from "@/backend";
+import { AppStatus, type CommandPayload } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,9 @@ import { useAppRegistryContext } from "@/context/app-context";
 import {
   type AppViewUI,
   useApps,
+  useCommandHistory,
   useCreateApp,
+  useIssueCommand,
   useKillSwitch,
   useRegenerateAppCode,
   useRemoveApp,
@@ -20,16 +22,24 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Copy,
+  History,
   Layers,
   Link2,
   Loader2,
   Pencil,
   Plus,
   Power,
+  Radar,
   RadioTower,
   RefreshCw,
+  Settings2,
+  ShieldAlert,
+  ShieldCheck,
   Trash2,
+  Unlock,
   WifiOff,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -265,6 +275,8 @@ function AppCard({
   const renameApp = useRenameApp();
   const regenerateCode = useRegenerateAppCode();
   const removeApp = useRemoveApp();
+  const issueCommand = useIssueCommand();
+  const { data: commandHistory } = useCommandHistory(app.id);
   const testDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTestRef = useRef<number>(0);
   const [isTesting, setIsTesting] = useState(false);
@@ -272,6 +284,16 @@ function AppCard({
   const [urlDraft, setUrlDraft] = useState(app.baseUrl ?? "");
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState(app.name);
+  const [showControls, setShowControls] = useState(false);
+  const [unlockId, setUnlockId] = useState("");
+  const [riskDraft, setRiskDraft] = useState({
+    dailyLossLimit: "",
+    maxTradesPerDay: "",
+    maxOpenPositions: "",
+    positionSizeLimit: "",
+    capitalAllocationPct: "",
+    totalCapital: "",
+  });
 
   const isActive = selectedApp?.id === app.id;
   const observed = connectionStatusMap[app.id];
@@ -358,6 +380,58 @@ function AppCard({
     } catch {
       toast.error("Failed to remove app");
     }
+  }
+
+  async function sendCommand(payload: CommandPayload, successMsg: string) {
+    try {
+      await issueCommand.mutateAsync({ appId: app.id, payload });
+      toast.success(successMsg);
+    } catch {
+      toast.error("Failed to issue command");
+    }
+  }
+
+  function handleUnlockUser() {
+    if (!unlockId.trim()) return;
+    sendCommand(
+      { type: "unlockUser", externalId: unlockId.trim() },
+      "Unlock command queued",
+    );
+    setUnlockId("");
+  }
+
+  function handleUpdateRiskPolicy() {
+    const parsed = {
+      dailyLossLimit:
+        riskDraft.dailyLossLimit.trim() === ""
+          ? undefined
+          : Number(riskDraft.dailyLossLimit),
+      maxTradesPerDay:
+        riskDraft.maxTradesPerDay.trim() === ""
+          ? undefined
+          : Number(riskDraft.maxTradesPerDay),
+      maxOpenPositions:
+        riskDraft.maxOpenPositions.trim() === ""
+          ? undefined
+          : Number(riskDraft.maxOpenPositions),
+      positionSizeLimit:
+        riskDraft.positionSizeLimit.trim() === ""
+          ? undefined
+          : Number(riskDraft.positionSizeLimit),
+      capitalAllocationPct:
+        riskDraft.capitalAllocationPct.trim() === ""
+          ? undefined
+          : Number(riskDraft.capitalAllocationPct),
+      totalCapital:
+        riskDraft.totalCapital.trim() === ""
+          ? undefined
+          : Number(riskDraft.totalCapital),
+    };
+    if (Object.values(parsed).every((v) => v === undefined)) return;
+    sendCommand(
+      { type: "updateRiskPolicy", ...parsed },
+      "Risk policy update queued",
+    );
   }
 
   return (
@@ -542,6 +616,238 @@ function AppCard({
             <Trash2 className="w-3.5 h-3.5" />
           )}
         </Button>
+      </div>
+
+      {/* Remote Control */}
+      <div className="mt-3 pt-3 border-t border-[rgba(91,157,255,0.1)]">
+        <button
+          type="button"
+          onClick={() => setShowControls((v) => !v)}
+          className="flex items-center gap-1.5 text-[11px] font-mono text-[rgba(232,232,255,0.5)] hover:text-blue-300 transition-colors w-full"
+          data-ocid={`apps.remote_control.toggle.${index + 1}`}
+        >
+          {showControls ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+          Remote Control
+        </button>
+
+        {showControls && (
+          <div className="mt-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+            {!actionsEnabled && (
+              <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)]">
+                Blocked: console kill switch is off (Settings).
+              </p>
+            )}
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand(
+                    { type: "setKillSwitch", armed: true },
+                    "Kill switch ARM queued",
+                  )
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(239,68,68,0.1)] hover:bg-[rgba(239,68,68,0.18)] text-red-300 border border-[rgba(239,68,68,0.25)]"
+              >
+                <ShieldAlert className="w-3 h-3 mr-1" /> Arm Kill Switch
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand(
+                    { type: "setKillSwitch", armed: false },
+                    "Kill switch DISARM queued",
+                  )
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(34,197,94,0.1)] hover:bg-[rgba(34,197,94,0.18)] text-green-300 border border-[rgba(34,197,94,0.25)]"
+              >
+                <ShieldCheck className="w-3 h-3 mr-1" /> Disarm
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand({ type: "emergencyHalt" }, "Emergency halt queued")
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(239,68,68,0.1)] hover:bg-[rgba(239,68,68,0.18)] text-red-300 border border-[rgba(239,68,68,0.25)]"
+              >
+                <Power className="w-3 h-3 mr-1" /> Emergency Halt
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand(
+                    { type: "clearEmergencyHalt" },
+                    "Clear halt queued",
+                  )
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(91,157,255,0.1)] hover:bg-[rgba(91,157,255,0.18)] text-blue-300 border border-[rgba(91,157,255,0.25)]"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" /> Clear Halt
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand(
+                    { type: "setMode", mode: "AUTONOMOUS" },
+                    "Mode -> AUTONOMOUS queued",
+                  )
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(147,89,255,0.1)] hover:bg-[rgba(147,89,255,0.18)] text-purple-300 border border-[rgba(147,89,255,0.25)]"
+              >
+                <Settings2 className="w-3 h-3 mr-1" /> Autonomous
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand(
+                    { type: "setMode", mode: "MANUAL" },
+                    "Mode -> MANUAL queued",
+                  )
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(147,89,255,0.1)] hover:bg-[rgba(147,89,255,0.18)] text-purple-300 border border-[rgba(147,89,255,0.25)]"
+              >
+                <Settings2 className="w-3 h-3 mr-1" /> Manual
+              </Button>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={() =>
+                  sendCommand({ type: "triggerScan" }, "Scan trigger queued")
+                }
+                className="text-[10px] font-mono h-7 px-2 bg-[rgba(91,157,255,0.1)] hover:bg-[rgba(91,157,255,0.18)] text-blue-300 border border-[rgba(91,157,255,0.25)]"
+              >
+                <Radar className="w-3 h-3 mr-1" /> Trigger Scan
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                value={unlockId}
+                onChange={(e) => setUnlockId(e.target.value)}
+                placeholder="User ID to unlock"
+                className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+              />
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending || !unlockId.trim()}
+                onClick={handleUnlockUser}
+                className="h-7 text-[10px] font-mono px-2 bg-[rgba(91,157,255,0.1)] hover:bg-[rgba(91,157,255,0.18)] text-blue-300 border border-[rgba(91,157,255,0.25)]"
+              >
+                <Unlock className="w-3 h-3 mr-1" /> Unlock
+              </Button>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mb-1.5">
+                Risk policy (leave blank to keep unchanged)
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <Input
+                  value={riskDraft.dailyLossLimit}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({ ...d, dailyLossLimit: e.target.value }))
+                  }
+                  placeholder="Daily loss limit"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+                <Input
+                  value={riskDraft.maxTradesPerDay}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({ ...d, maxTradesPerDay: e.target.value }))
+                  }
+                  placeholder="Max trades/day"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+                <Input
+                  value={riskDraft.maxOpenPositions}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({ ...d, maxOpenPositions: e.target.value }))
+                  }
+                  placeholder="Max open positions"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+                <Input
+                  value={riskDraft.positionSizeLimit}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({ ...d, positionSizeLimit: e.target.value }))
+                  }
+                  placeholder="Position size limit"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+                <Input
+                  value={riskDraft.capitalAllocationPct}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({
+                      ...d,
+                      capitalAllocationPct: e.target.value,
+                    }))
+                  }
+                  placeholder="Capital allocation %"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+                <Input
+                  value={riskDraft.totalCapital}
+                  onChange={(e) =>
+                    setRiskDraft((d) => ({ ...d, totalCapital: e.target.value }))
+                  }
+                  placeholder="Total capital"
+                  className="h-7 text-[11px] bg-[rgba(255,255,255,0.04)] border-[rgba(91,157,255,0.18)] text-[#E8E8FF] font-mono"
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={!actionsEnabled || issueCommand.isPending}
+                onClick={handleUpdateRiskPolicy}
+                className="w-full h-7 text-[10px] font-mono bg-[rgba(91,157,255,0.1)] hover:bg-[rgba(91,157,255,0.18)] text-blue-300 border border-[rgba(91,157,255,0.25)]"
+              >
+                Update Risk Policy
+              </Button>
+            </div>
+
+            {commandHistory && commandHistory.length > 0 && (
+              <div>
+                <p className="text-[10px] font-mono text-[rgba(232,232,255,0.35)] mb-1 flex items-center gap-1">
+                  <History className="w-3 h-3" /> Recent commands
+                </p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {commandHistory
+                    .slice()
+                    .sort((a, b) => b.issuedAt - a.issuedAt)
+                    .slice(0, 5)
+                    .map((cmd) => (
+                      <div
+                        key={cmd.id}
+                        className="flex items-center justify-between gap-2 text-[10px] font-mono text-[rgba(232,232,255,0.5)] px-2 py-1 rounded"
+                        style={{ background: "rgba(255,255,255,0.03)" }}
+                      >
+                        <span className="truncate">{cmd.payload.type}</span>
+                        <span
+                          className={cn(
+                            "flex-shrink-0",
+                            cmd.status === "acknowledged" && "text-green-400",
+                            cmd.status === "failed" && "text-red-400",
+                            cmd.status === "pending" && "text-amber-400",
+                          )}
+                        >
+                          {cmd.status}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
