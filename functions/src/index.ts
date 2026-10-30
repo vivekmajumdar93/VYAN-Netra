@@ -9,6 +9,7 @@
 
 export {
   createApp,
+  updateApp,
   setAppBaseUrl,
   renameApp,
   recordHeartbeat,
@@ -25,8 +26,26 @@ export {
   issueCommand,
   getPendingCommands,
   acknowledgeCommand,
+  cancelCommand,
   listCommandHistory,
 } from "./domains/commands.js";
+
+export {
+  registerCapabilities,
+  getCapabilities,
+  reportAppStats,
+  getAppStats,
+  reportAppError,
+  listAppErrors,
+} from "./domains/capabilities.js";
+
+export {
+  createClient,
+  updateClient,
+  removeClient,
+  listClients,
+  getClient,
+} from "./domains/clients.js";
 
 export { requestAdminToken } from "./domains/auth.js";
 
@@ -47,7 +66,7 @@ export {
 } from "./domains/users.js";
 
 export {
-  submitMetrics,
+  reportMetrics,
   getLatestMetrics,
   getMetricsHistory,
   createAlert,

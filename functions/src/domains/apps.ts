@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { db, nowMs } from "../shared/admin.js";
 import { notFound } from "../shared/errors.js";
 import { isKillSwitchEnabled } from "./settings.js";
@@ -12,7 +12,12 @@ const CODE_ALPHABET =
 const HEARTBEAT_STALE_MS = 3 * 60 * 1000;
 
 type AppStatus = "pending" | "connected" | "disconnected";
+type AppKind = "app" | "website";
+type OwnerType = "vyan" | "client";
 
+// kind/ownerType/clientId/description were added after the first apps were
+// registered, so every read defaults them (see toView) rather than assuming
+// they exist on older documents.
 interface AppDoc {
   name: string;
   baseUrl: string | null;
@@ -20,6 +25,10 @@ interface AppDoc {
   status: AppStatus;
   lastHeartbeat: number | null;
   addedAt: number;
+  kind?: AppKind;
+  ownerType?: OwnerType;
+  clientId?: string | null;
+  description?: string | null;
 }
 
 export interface AppView {
@@ -30,6 +39,10 @@ export interface AppView {
   status: AppStatus;
   lastHeartbeat: number | null;
   addedAt: number;
+  kind: AppKind;
+  ownerType: OwnerType;
+  clientId: string | null;
+  description: string | null;
 }
 
 const apps = () => db.collection("apps");
@@ -51,7 +64,45 @@ function toView(id: string, doc: AppDoc): AppView {
     status: liveStatus(doc),
     lastHeartbeat: doc.lastHeartbeat,
     addedAt: doc.addedAt,
+    kind: doc.kind ?? "app",
+    ownerType: doc.ownerType ?? "vyan",
+    clientId: doc.clientId ?? null,
+    description: doc.description ?? null,
   };
+}
+
+interface AppDetailsInput {
+  kind?: AppKind;
+  ownerType?: OwnerType;
+  clientId?: string | null;
+  description?: string | null;
+}
+
+// A client-owned app must name a client that exists; a VYAN-owned one must
+// not carry a clientId at all — keeps the two workspaces from ever sharing
+// or orphaning an app.
+async function resolveOwnership(
+  input: AppDetailsInput,
+): Promise<Pick<AppDoc, "ownerType" | "clientId">> {
+  const ownerType: OwnerType = input.ownerType ?? "vyan";
+  if (ownerType === "vyan") return { ownerType, clientId: null };
+  if (!input.clientId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "A client-owned app needs a client.",
+    );
+  }
+  const client = await db.collection("clients").doc(input.clientId).get();
+  if (!client.exists) notFound("Client");
+  return { ownerType, clientId: input.clientId };
+}
+
+function checkKind(kind: unknown): AppKind {
+  if (kind === undefined) return "app";
+  if (kind !== "app" && kind !== "website") {
+    throw new HttpsError("invalid-argument", "Kind must be app or website.");
+  }
+  return kind;
 }
 
 // Cryptographically random 6-char code (36^6 ≈ 2.18B combinations), retried
@@ -69,21 +120,55 @@ async function generateCode(): Promise<string> {
   throw new Error("Failed to generate a unique app code");
 }
 
-export const createApp = onCall<{ name: string }, Promise<AppView>>(
-  async (request) => {
-    const code = await generateCode();
-    const doc: AppDoc = {
-      name: request.data.name,
-      baseUrl: null,
-      appCode: code,
-      status: "pending",
-      lastHeartbeat: null,
-      addedAt: nowMs(),
-    };
-    await apps().doc(code).set(doc);
-    return toView(code, doc);
-  },
-);
+export const createApp = onCall<
+  { name: string } & AppDetailsInput,
+  Promise<AppView>
+>(async (request) => {
+  const name = request.data.name?.trim();
+  if (!name) throw new HttpsError("invalid-argument", "Name is required.");
+  const ownership = await resolveOwnership(request.data);
+  const code = await generateCode();
+  const doc: AppDoc = {
+    name,
+    baseUrl: null,
+    appCode: code,
+    status: "pending",
+    lastHeartbeat: null,
+    addedAt: nowMs(),
+    kind: checkKind(request.data.kind),
+    description: request.data.description?.trim() || null,
+    ...ownership,
+  };
+  await apps().doc(code).set(doc);
+  return toView(code, doc);
+});
+
+// Edits an app's descriptive fields and who owns it (VYAN's own products vs
+// a specific client's). Only the fields actually sent are changed.
+export const updateApp = onCall<
+  { id: string; name?: string } & AppDetailsInput,
+  Promise<AppView>
+>(async (request) => {
+  const ref = apps().doc(request.data.id);
+  const snap = await ref.get();
+  if (!snap.exists) notFound("App");
+  const update: Partial<AppDoc> = {};
+  if (request.data.name !== undefined) {
+    const name = request.data.name.trim();
+    if (!name) throw new HttpsError("invalid-argument", "Name is required.");
+    update.name = name;
+  }
+  if (request.data.kind !== undefined) update.kind = checkKind(request.data.kind);
+  if (request.data.description !== undefined) {
+    update.description = request.data.description?.trim() || null;
+  }
+  if (request.data.ownerType !== undefined) {
+    Object.assign(update, await resolveOwnership(request.data));
+  }
+  await ref.update(update);
+  const updated = await ref.get();
+  return toView(ref.id, updated.data() as AppDoc);
+});
 
 export const setAppBaseUrl = onCall<
   { id: string; baseUrl: string },
@@ -169,6 +254,12 @@ export const removeApp = onCall<{ id: string }, Promise<boolean>>(
     const snap = await ref.get();
     if (!snap.exists) return false;
     await ref.delete();
+    // The app's declared controls and last live figures are meaningless
+    // without it.
+    await Promise.all([
+      db.collection("appCapabilities").doc(ref.id).delete(),
+      db.collection("appStats").doc(ref.id).delete(),
+    ]);
     return true;
   },
 );

@@ -34,6 +34,20 @@ export interface AppView {
   'status' : AppStatus,
   'lastHeartbeat' : [] | [Timestamp],
   'addedAt' : Timestamp,
+  // Added after the legacy shape above, so plain JSON like the new domains
+  // below rather than candid-style optionals.
+  'kind' : AppKind,
+  'ownerType' : OwnerType,
+  'clientId' : string | null,
+  'description' : string | null,
+}
+export type AppKind = 'app' | 'website';
+export type OwnerType = 'vyan' | 'client';
+export interface AppDetailsInput {
+  kind? : AppKind;
+  ownerType? : OwnerType;
+  clientId? : string | null;
+  description? : string | null;
 }
 export interface AlertView {
   'id' : Id,
@@ -190,36 +204,91 @@ export interface UserView {
   'role' : UserRole,
   'email' : string,
 }
-// New domain (commands) — no legacy Motoko/Candid counterpart to stay
-// byte-for-byte compatible with, unlike everything above. Plain JSON
-// shapes (no bigint ids/timestamps, no `[] | [T]` optionals, no
-// `{tag: null}` variants) since there's no prior wire format to match —
-// see BRIDGE-PROTOCOL.md and functions/src/domains/commands.ts.
-export type CommandPayload =
-  | { type : 'setKillSwitch'; armed : boolean }
-  | { type : 'setMode'; mode : string }
-  | { type : 'emergencyHalt' }
-  | { type : 'clearEmergencyHalt' }
-  | {
-      type : 'updateRiskPolicy';
-      dailyLossLimit? : number;
-      maxTradesPerDay? : number;
-      maxOpenPositions? : number;
-      positionSizeLimit? : number;
-      capitalAllocationPct? : number;
-      totalCapital? : number;
-    }
-  | { type : 'unlockUser'; externalId : string }
-  | { type : 'triggerScan' };
-export type CommandStatus = 'pending' | 'acknowledged' | 'failed';
+// New domains (commands, capabilities, clients) — no legacy Motoko/Candid
+// counterpart to stay byte-for-byte compatible with, unlike everything
+// above. Plain JSON shapes (no bigint ids/timestamps, no `[] | [T]`
+// optionals, no `{tag: null}` variants). See functions/src/domains/.
+//
+// Netra does not define commands: every control below is declared by the
+// linked app itself in its own manifest, and Netra renders it.
+export type ParamType = 'number' | 'text' | 'boolean' | 'select';
+export interface ControlParam {
+  name : string;
+  label : string;
+  type : ParamType;
+  required? : boolean;
+  options? : { value : string; label : string }[];
+  min? : number;
+  max? : number;
+  placeholder? : string;
+}
+export interface ControlSpec {
+  id : string;
+  label : string;
+  description? : string;
+  group? : string;
+  danger? : boolean;
+  confirm? : string;
+  params? : ControlParam[];
+}
+export interface Capabilities {
+  controls : ControlSpec[];
+  updatedAt : number;
+}
+export interface StatItem {
+  key : string;
+  label : string;
+  value : number | string | boolean;
+  unit? : string;
+  group? : string;
+  tone? : 'good' | 'warn' | 'bad' | 'neutral';
+}
+export interface AppStats {
+  stats : StatItem[];
+  updatedAt : number;
+}
+export type ErrorSeverity = 'critical' | 'warning' | 'info';
+export interface AppErrorView {
+  id : number;
+  appId : string;
+  severity : ErrorSeverity;
+  source : string;
+  message : string;
+  timestamp : number;
+}
+export type CommandParams = Record<string, string | number | boolean>;
+export type CommandStatus =
+  | 'pending'
+  | 'acknowledged'
+  | 'failed'
+  | 'expired'
+  | 'cancelled';
 export interface CommandView {
   id : number;
   appId : string;
-  payload : CommandPayload;
+  type : string;
+  label : string;
+  params : CommandParams;
   status : CommandStatus;
   result : string | null;
   issuedAt : number;
+  expiresAt : number;
   completedAt : number | null;
+}
+export interface ClientView {
+  id : string;
+  name : string;
+  contactName : string | null;
+  contactEmail : string | null;
+  notes : string | null;
+  createdAt : number;
+  appCount : number;
+}
+export interface ClientInput {
+  name : string;
+  contactName? : string | null;
+  contactEmail? : string | null;
+  notes? : string | null;
 }
 
 export interface _SERVICE {
@@ -230,7 +299,20 @@ export interface _SERVICE {
     [string, string, MetricSeverity, bigint, bigint],
     AlertView
   >,
-  'createApp' : ActorMethod<[string], AppView>,
+  'createApp' : ActorMethod<[string, AppDetailsInput], AppView>,
+  'updateApp' : ActorMethod<
+    [string, AppDetailsInput & { name? : string }],
+    AppView
+  >,
+  'createClient' : ActorMethod<[ClientInput], ClientView>,
+  'updateClient' : ActorMethod<[string, Partial<ClientInput>], ClientView>,
+  'removeClient' : ActorMethod<[string], boolean>,
+  'listClients' : ActorMethod<[], Array<ClientView>>,
+  'getClient' : ActorMethod<[string], ClientView | null>,
+  'getCapabilities' : ActorMethod<[string], Capabilities | null>,
+  'getAppStats' : ActorMethod<[string], AppStats | null>,
+  'listAppErrors' : ActorMethod<[string], Array<AppErrorView>>,
+  'cancelCommand' : ActorMethod<[number], boolean>,
   'createEmailConfig' : ActorMethod<
     [string, string, string, string],
     EmailConfigView
@@ -260,7 +342,7 @@ export interface _SERVICE {
   'getUserStatusForApp' : ActorMethod<[string, string], [] | [UserStatus]>,
   'getZohoStatus' : ActorMethod<[], ZohoStatusView>,
   'holdUser' : ActorMethod<[bigint], undefined>,
-  'issueCommand' : ActorMethod<[string, CommandPayload], CommandView>,
+  'issueCommand' : ActorMethod<[string, string, CommandParams], CommandView>,
   'listActiveAlerts' : ActorMethod<[], Array<AlertView>>,
   'listAlertHistory' : ActorMethod<[string], Array<AlertView>>,
   'listAllUpdates' : ActorMethod<[], Array<UpdateView>>,
@@ -309,10 +391,6 @@ export interface _SERVICE {
   'setKillSwitch' : ActorMethod<[boolean], KillSwitchView>,
   'setZohoConfig' : ActorMethod<[string, string, string], undefined>,
   'snoozeNotification' : ActorMethod<[bigint, Time], undefined>,
-  'submitMetrics' : ActorMethod<
-    [string, bigint, bigint, bigint, bigint, bigint, string],
-    SystemMetrics
-  >,
   'syncAppUsers' : ActorMethod<
     [string, Array<[string, string, string]>],
     boolean

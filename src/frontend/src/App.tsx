@@ -7,12 +7,14 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   useLocation,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const AppsPage = lazy(() => import("@/pages/AppsPage"));
+const AppConsolePage = lazy(() => import("@/pages/AppConsolePage"));
+const ClientPage = lazy(() => import("@/pages/ClientPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const MonitoringPage = lazy(() => import("@/pages/MonitoringPage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
@@ -23,10 +25,6 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Dashboard", subtitle: "VYAN Netra Command Center" },
-  "/apps": {
-    title: "Apps",
-    subtitle: "Register, connect, and control every VYAN app",
-  },
   "/users": { title: "Users", subtitle: "User management across apps" },
   "/monitoring": {
     title: "Monitoring",
@@ -47,7 +45,11 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 
 function AppShell() {
   const location = useLocation();
-  const meta = PAGE_TITLES[location.pathname] ?? PAGE_TITLES["/"];
+  const meta = location.pathname.startsWith("/apps/")
+    ? { title: "App console", subtitle: "Controls, live figures and activity" }
+    : location.pathname.startsWith("/clients/")
+      ? { title: "Client", subtitle: "Apps and websites built for this client" }
+      : (PAGE_TITLES[location.pathname] ?? PAGE_TITLES["/"]);
   return (
     <Layout title={meta.title} subtitle={meta.subtitle}>
       <Suspense
@@ -70,10 +72,24 @@ const dashboardRoute = createRoute({
   path: "/",
   component: DashboardPage,
 });
-const appsRoute = createRoute({
+const appConsoleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/apps/$appId",
+  component: AppConsolePage,
+});
+const clientRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/$clientId",
+  component: ClientPage,
+});
+// The old Apps registry page is gone: apps live on the dashboard and each has
+// its own console. Anything still linking to /apps lands on the dashboard.
+const appsRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/apps",
-  component: AppsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 const usersRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -112,7 +128,9 @@ const settingsRoute = createRoute({
 });
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
-  appsRoute,
+  appConsoleRoute,
+  clientRoute,
+  appsRedirectRoute,
   usersRoute,
   monitoringRoute,
   notificationsRoute,

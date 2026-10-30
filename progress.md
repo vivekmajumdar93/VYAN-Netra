@@ -99,6 +99,28 @@ existing repo config at that existing project and pushing the code live.
 
 ## Change Log (most recent first)
 
+- **2026-10-30 — Apps declare their own controls; workspaces and clients; real data only.**
+  Netra no longer defines commands. Replaced the hardcoded command union with a
+  per-app manifest: the app calls `registerCapabilities` (controls, with typed
+  params and danger/confirm flags) and `reportAppStats` (its own live figures);
+  `issueCommand(appId, type, params)` only accepts controls that app declared and
+  validates params against its spec. Commands now expire after 10 minutes
+  (`expired`), can be cancelled, and failures/reasons show in the app's Activity
+  tab; apps report errors via `reportAppError`. New `reportMetrics` identifies
+  the app by code (the old `submitMetrics` trusted a caller-supplied id, which
+  also broke after a code regeneration) and rounds to whole numbers; the
+  Monitoring page's "Submit Test Metrics" form and `submitMetrics` are removed
+  (made-up numbers had no place in a console that must show real data). New
+  `clients` collection and `ownerType`/`clientId`/`kind` on apps. UI: VYAN /
+  Clients workspace switch, dashboard of app cards, client pages, and a dedicated
+  per-app console (Overview, Controls, Users, Activity, Connection) rendered
+  from what the app declared; the old Apps page is removed. Sidebar is a
+  slide-in drawer on small screens; skeletons restyled. Verified against the
+  Firebase emulator with the real Vanijya server and in a browser (desktop and
+  phone widths): a command issued from the UI changed the live engine and
+  returned its real result; a command the engine could not run showed Failed
+  with the app's reason. See BRIDGE-PROTOCOL.md.
+
 - 2026-10-15: **Merged `claude/repo-comparison-code-review-154diw` into
   `main`** (user's explicit go-ahead) — clean fast-forward, no
   conflicts, no divergence. Also removed one more stray tracked file

@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { AppRegistryProvider } from "./context/app-context";
+import { WorkspaceProvider } from "./context/workspace-context";
 import { getFirebaseAuth } from "./firebase";
 import {
   VyanAuthContext,
@@ -70,7 +71,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <VyanAuthProvider>
       <AppRegistryProvider>
-        <App />
+        <WorkspaceProvider>
+          <App />
+        </WorkspaceProvider>
       </AppRegistryProvider>
     </VyanAuthProvider>
   </QueryClientProvider>,

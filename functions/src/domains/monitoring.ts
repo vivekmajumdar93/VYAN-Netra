@@ -1,6 +1,8 @@
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { db, nextId, nowMs } from "../shared/admin.js";
+import { findAppIdByCode } from "../shared/appLookup.js";
 import { notFound } from "../shared/errors.js";
+import { isKillSwitchEnabled } from "./settings.js";
 
 type MetricSeverity = "critical" | "warning" | "info";
 
@@ -34,9 +36,13 @@ export interface AlertView extends AlertDoc {
 const metrics = () => db.collection("systemMetrics");
 const alerts = () => db.collection("alerts");
 
-export const submitMetrics = onCall<
+// What a linked app calls to push its own measured figures. Identified by
+// pairing code (the id can't be trusted from the caller, and the code can be
+// regenerated independently of it) and gated by the console-wide kill
+// switch like the other inbound bridge calls.
+export const reportMetrics = onCall<
   {
-    appId: string;
+    appCode: string;
     cpu: number;
     memory: number;
     disk: number;
@@ -44,12 +50,34 @@ export const submitMetrics = onCall<
     networkUptime: number;
     connectionStatus: string;
   },
-  Promise<MetricsDoc>
+  Promise<boolean>
 >(async (request) => {
+  if (!(await isKillSwitchEnabled())) return false;
+  const appId = await findAppIdByCode(request.data.appCode);
+  if (appId === null) return false;
+  const { appCode: _appCode, ...figures } = request.data;
+  for (const key of ["cpu", "memory", "disk", "apiLatency", "networkUptime"] as const) {
+    if (typeof figures[key] !== "number" || !Number.isFinite(figures[key])) {
+      throw new HttpsError("invalid-argument", `${key} must be a number.`);
+    }
+  }
+  // Stored as whole numbers (the console's metric model is integer-valued),
+  // so a real reading like 12.6% CPU is kept as 13, never rejected.
+  const whole = (n: number) => Math.max(0, Math.round(n));
   const id = await nextId("metrics");
-  const doc: MetricsDoc = { id, ...request.data, timestamp: nowMs() };
+  const doc: MetricsDoc = {
+    id,
+    appId,
+    cpu: whole(figures.cpu),
+    memory: whole(figures.memory),
+    disk: whole(figures.disk),
+    apiLatency: whole(figures.apiLatency),
+    networkUptime: whole(figures.networkUptime),
+    connectionStatus: String(figures.connectionStatus).slice(0, 40),
+    timestamp: nowMs(),
+  };
   await metrics().doc(String(id)).set(doc);
-  return doc;
+  return true;
 });
 
 export const getLatestMetrics = onCall<

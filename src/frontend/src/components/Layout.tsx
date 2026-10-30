@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { useState } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 
@@ -10,6 +11,7 @@ interface LayoutProps {
 
 // VYAN Security: direct admin access — Firebase auth will be linked later.
 export default function Layout({ title, subtitle, children }: LayoutProps) {
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -25,10 +27,14 @@ export default function Layout({ title, subtitle, children }: LayoutProps) {
         aria-hidden="true"
       />
 
-      <Sidebar />
+      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
 
       <div className="relative z-10 flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header title={title} subtitle={subtitle} />
+        <Header
+          title={title}
+          subtitle={subtitle}
+          onMenu={() => setNavOpen(true)}
+        />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
 

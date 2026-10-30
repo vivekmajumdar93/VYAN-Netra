@@ -2,14 +2,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-backend";
 import { useVyanAuth } from "@/hooks/use-vyan-auth";
-import { Bell, ChevronDown, LogOut, Shield } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Shield } from "lucide-react";
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  onMenu?: () => void;
 }
 
-export default function Header({ title, subtitle }: HeaderProps) {
+export default function Header({ title, subtitle, onMenu }: HeaderProps) {
   const { currentUser, logout } = useVyanAuth();
   const { data: notifications } = useNotifications(null, null, false);
   const unread = notifications?.filter((n) => !n.isRead).length ?? 0;
@@ -22,9 +23,18 @@ export default function Header({ title, subtitle }: HeaderProps) {
     .toUpperCase();
 
   return (
-    <header className="flex items-center justify-between px-6 py-3.5 border-b border-[rgba(91,157,255,0.12)] bg-[rgba(5,10,25,0.7)] backdrop-blur-xl flex-shrink-0">
+    <header className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-[rgba(91,157,255,0.12)] bg-[rgba(5,10,25,0.7)] backdrop-blur-xl flex-shrink-0">
       {/* Left: title */}
       <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={onMenu}
+          aria-label="Open menu"
+          className="lg:hidden p-2 -ml-2 rounded-lg text-[rgba(232,232,255,0.6)] hover:text-[#E8E8FF] hover:bg-[rgba(91,157,255,0.1)]"
+          data-ocid="header.menu.button"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <div className="min-w-0">
           <h1 className="font-display text-xl font-semibold text-[#E8E8FF] tracking-tight truncate">
             {title}
@@ -71,7 +81,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 {initials}
               </span>
             </div>
-            <div className="flex flex-col min-w-0">
+            <div className="hidden md:flex flex-col min-w-0">
               <span className="text-xs font-mono text-[rgba(232,232,255,0.85)] max-w-[120px] truncate">
                 {currentUser?.name ?? "VYAN Admin"}
               </span>

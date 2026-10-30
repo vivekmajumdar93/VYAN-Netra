@@ -1,10 +1,11 @@
 import {
   type ActivityEventType,
   type AlertView,
+  type AppDetailsInput,
   type AppStatus,
   type AppView,
-  type CommandPayload,
-  type CommandView,
+  type ClientInput,
+  type CommandParams,
   type EmailConfigView,
   type EmailLog,
   type EmailStatus,
@@ -46,9 +47,13 @@ function useBackendActor() {
 }
 
 // ── UI-friendly view types (variant fields converted to string enums) ──────
-export type AppViewUI = Omit<AppView, "status" | "baseUrl"> & {
+export type AppViewUI = Omit<
+  AppView,
+  "status" | "baseUrl" | "lastHeartbeat"
+> & {
   status: AppStatus;
   baseUrl: string | null;
+  lastHeartbeat: Time | null;
 };
 export type UserViewUI = Omit<UserView, "role" | "status"> & {
   role: UserRole;
@@ -88,6 +93,7 @@ const mapApp = (a: AppView): AppViewUI => ({
   ...a,
   status: fromVariant<AppStatus>(a.status as unknown as Record<string, null>),
   baseUrl: fromOpt(a.baseUrl),
+  lastHeartbeat: fromOpt(a.lastHeartbeat),
 });
 const mapUser = (u: UserView): UserViewUI => ({
   ...u,
@@ -167,11 +173,34 @@ export function useCreateApp() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (args: { name: string } & AppDetailsInput) => {
       if (!actor) throw new Error("Not connected");
-      return mapApp(await actor.createApp(name));
+      const { name, ...details } = args;
+      return mapApp(await actor.createApp(name, details));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["apps"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+
+export function useUpdateApp() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      args: { id: string; name?: string } & AppDetailsInput,
+    ) => {
+      if (!actor) throw new Error("Not connected");
+      const { id, ...changes } = args;
+      return mapApp(await actor.updateApp(id, changes));
+    },
+    onSuccess: (_r, args) => {
+      qc.invalidateQueries({ queryKey: ["apps"] });
+      qc.invalidateQueries({ queryKey: ["app", args.id] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
   });
 }
 
@@ -240,20 +269,108 @@ export function useRemoveApp() {
   });
 }
 
+// ── Clients ──────────────────────────────────────────────────────────────────
+export function useClients() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => (actor ? actor.listClients() : []),
+    enabled: !!actor && !isFetching,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useClient(id: string) {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["client", id],
+    queryFn: async () => (actor ? actor.getClient(id) : null),
+    enabled: !!actor && !isFetching && !!id,
+  });
+}
+
+export function useCreateClient() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ClientInput) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.createClient(input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+  });
+}
+
+export function useUpdateClient() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string } & Partial<ClientInput>) => {
+      if (!actor) throw new Error("Not connected");
+      const { id, ...changes } = args;
+      return actor.updateClient(id, changes);
+    },
+    onSuccess: (_r, args) => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["client", args.id] });
+    },
+  });
+}
+
+export function useRemoveClient() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.removeClient(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+  });
+}
+
+// ── Per-app console data: what the app declared, what it reports ─────────────
+// Everything here is plain JSON (see the note on these types in
+// declarations/backend.did.d.ts). Netra stores and shows exactly what the app
+// sent, with its timestamp, so the UI can say how fresh it is.
+export function useCapabilities(appId: string) {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["capabilities", appId],
+    queryFn: async () => (actor ? actor.getCapabilities(appId) : null),
+    enabled: !!actor && !isFetching && !!appId,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAppStats(appId: string) {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["appStats", appId],
+    queryFn: async () => (actor ? actor.getAppStats(appId) : null),
+    enabled: !!actor && !isFetching && !!appId,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAppErrors(appId: string) {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["appErrors", appId],
+    queryFn: async () => (actor ? actor.listAppErrors(appId) : []),
+    enabled: !!actor && !isFetching && !!appId,
+    refetchInterval: 20_000,
+  });
+}
+
 // ── Commands ─────────────────────────────────────────────────────────────────
-// CommandPayload/CommandView are already plain JSON (see the comment on
-// CommandPayload in declarations/backend.did.d.ts) — no fromVariant/fromOpt
-// mapping needed, unlike AppView/UserView above.
 export function useCommandHistory(appId: string) {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
     queryKey: ["commands", appId],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.listCommandHistory(appId);
-    },
+    queryFn: async () => (actor ? actor.listCommandHistory(appId) : []),
     enabled: !!actor && !isFetching && !!appId,
-    refetchInterval: 10_000,
+    refetchInterval: 5_000,
   });
 }
 
@@ -261,9 +378,26 @@ export function useIssueCommand() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { appId: string; payload: CommandPayload }) => {
+    mutationFn: async (args: {
+      appId: string;
+      type: string;
+      params: CommandParams;
+    }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.issueCommand(args.appId, args.payload) as Promise<CommandView>;
+      return actor.issueCommand(args.appId, args.type, args.params);
+    },
+    onSuccess: (_result, args) =>
+      qc.invalidateQueries({ queryKey: ["commands", args.appId] }),
+  });
+}
+
+export function useCancelCommand() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: number; appId: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.cancelCommand(args.id);
     },
     onSuccess: (_result, args) =>
       qc.invalidateQueries({ queryKey: ["commands", args.appId] }),
@@ -450,35 +584,6 @@ export function useMetricsHistory(appId: string) {
     },
     enabled: !!actor && !isFetching && !!appId,
     refetchInterval: 60_000,
-  });
-}
-
-export function useSubmitMetrics() {
-  const { actor } = useBackendActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (args: {
-      appId: string;
-      cpu: bigint;
-      memory: bigint;
-      disk: bigint;
-      apiLatency: bigint;
-      networkUptime: bigint;
-      connectionStatus: string;
-    }) => {
-      if (!actor) throw new Error("Not connected");
-      return actor.submitMetrics(
-        args.appId,
-        args.cpu,
-        args.memory,
-        args.disk,
-        args.apiLatency,
-        args.networkUptime,
-        args.connectionStatus,
-      );
-    },
-    onSuccess: (_, vars) =>
-      qc.invalidateQueries({ queryKey: ["metrics-latest", vars.appId] }),
   });
 }
 

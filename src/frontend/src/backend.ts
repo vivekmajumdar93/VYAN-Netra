@@ -16,15 +16,38 @@
 
 import { httpsCallable, type Functions } from "firebase/functions";
 import { getFirebaseFunctions } from "./firebase";
-import type { _SERVICE, CommandPayload, CommandView } from "./declarations/backend.did";
+import type {
+  _SERVICE,
+  AppDetailsInput,
+  AppErrorView,
+  AppStats,
+  Capabilities,
+  ClientInput,
+  ClientView,
+  CommandParams,
+  CommandView,
+} from "./declarations/backend.did";
 
 export type {
+  AppDetailsInput,
+  AppErrorView,
   AppId,
+  AppKind,
+  AppStats,
   AppView,
   AlertView,
-  CommandPayload,
+  Capabilities,
+  ClientInput,
+  ClientView,
+  CommandParams,
   CommandStatus,
   CommandView,
+  ControlParam,
+  ControlSpec,
+  ErrorSeverity,
+  OwnerType,
+  ParamType,
+  StatItem,
   EmailConfigId,
   EmailConfigView,
   EmailLog,
@@ -172,6 +195,10 @@ interface WireApp {
   status: string;
   lastHeartbeat: number | null;
   addedAt: number;
+  kind: "app" | "website";
+  ownerType: "vyan" | "client";
+  clientId: string | null;
+  description: string | null;
 }
 interface WireAlert {
   id: number;
@@ -300,6 +327,10 @@ function unwireApp(w: WireApp) {
     status: unwireVariant(w.status),
     lastHeartbeat: unwireOptTs(w.lastHeartbeat),
     addedAt: unwireTs(w.addedAt),
+    kind: w.kind,
+    ownerType: w.ownerType,
+    clientId: w.clientId,
+    description: w.description,
   };
 }
 function unwireAlert(w: WireAlert) {
@@ -319,11 +350,11 @@ function unwireMetrics(w: WireMetrics) {
   return {
     id: unwireId(w.id),
     appId: w.appId,
-    cpu: unwireId(w.cpu),
-    memory: unwireId(w.memory),
-    disk: unwireId(w.disk),
-    apiLatency: unwireId(w.apiLatency),
-    networkUptime: unwireId(w.networkUptime),
+    cpu: unwireId(Math.round(w.cpu)),
+    memory: unwireId(Math.round(w.memory)),
+    disk: unwireId(Math.round(w.disk)),
+    apiLatency: unwireId(Math.round(w.apiLatency)),
+    networkUptime: unwireId(Math.round(w.networkUptime)),
     connectionStatus: w.connectionStatus,
     timestamp: unwireTs(w.timestamp),
   };
@@ -448,8 +479,12 @@ export function createActor(): _SERVICE {
 
   return {
     // ── Apps ──────────────────────────────────────────────────────────
-    createApp: async (name) => {
-      const w = await call<{ name: string }, WireApp>(functions, "createApp")({ name });
+    createApp: async (name, details) => {
+      const w = await call<{ name: string } & AppDetailsInput, WireApp>(functions, "createApp")({ name, ...details });
+      return unwireApp(w) as any;
+    },
+    updateApp: async (id, changes) => {
+      const w = await call<{ id: string } & AppDetailsInput & { name?: string }, WireApp>(functions, "updateApp")({ id, ...changes });
       return unwireApp(w) as any;
     },
     setAppBaseUrl: async (id, baseUrl) => {
@@ -493,13 +528,30 @@ export function createActor(): _SERVICE {
       return unwireKillSwitch(w) as any;
     },
 
-    // ── Commands ──────────────────────────────────────────────────────
-    // payload/CommandView are already plain JSON on both sides (new
-    // domain, no legacy candid shape to translate to/from — see the
-    // comment on CommandPayload in declarations/backend.did.d.ts), so
-    // these pass straight through with no wire/unwire step.
-    issueCommand: async (appId, payload) =>
-      call<{ appId: string; payload: CommandPayload }, CommandView>(functions, "issueCommand")({ appId, payload }),
+    // ── Clients, capabilities, commands ──────────────────────────────
+    // New domains: plain JSON on both sides (see the note on these types in
+    // declarations/backend.did.d.ts), so they pass straight through with no
+    // wire/unwire step.
+    createClient: async (input) =>
+      call<ClientInput, ClientView>(functions, "createClient")(input),
+    updateClient: async (id, changes) =>
+      call<{ id: string } & Partial<ClientInput>, ClientView>(functions, "updateClient")({ id, ...changes }),
+    removeClient: async (id) =>
+      call<{ id: string }, boolean>(functions, "removeClient")({ id }),
+    listClients: async () =>
+      call<undefined, ClientView[]>(functions, "listClients")(),
+    getClient: async (id) =>
+      call<{ id: string }, ClientView | null>(functions, "getClient")({ id }),
+    getCapabilities: async (appId) =>
+      call<{ appId: string }, Capabilities | null>(functions, "getCapabilities")({ appId }),
+    getAppStats: async (appId) =>
+      call<{ appId: string }, AppStats | null>(functions, "getAppStats")({ appId }),
+    listAppErrors: async (appId) =>
+      call<{ appId: string }, AppErrorView[]>(functions, "listAppErrors")({ appId }),
+    issueCommand: async (appId, type, params) =>
+      call<{ appId: string; type: string; params: CommandParams }, CommandView>(functions, "issueCommand")({ appId, type, params }),
+    cancelCommand: async (id) =>
+      call<{ id: number }, boolean>(functions, "cancelCommand")({ id }),
     getPendingCommands: async (appCode) =>
       call<{ appCode: string }, CommandView[]>(functions, "getPendingCommands")({ appCode }),
     acknowledgeCommand: async (appCode, id, success, result) =>
@@ -572,29 +624,6 @@ export function createActor(): _SERVICE {
     },
 
     // ── Monitoring ────────────────────────────────────────────────────
-    submitMetrics: async (appId, cpu, memory, disk, apiLatency, networkUptime, connectionStatus) => {
-      const w = await call<
-        {
-          appId: string;
-          cpu: number;
-          memory: number;
-          disk: number;
-          apiLatency: number;
-          networkUptime: number;
-          connectionStatus: string;
-        },
-        WireMetrics
-      >(functions, "submitMetrics")({
-        appId,
-        cpu: wireId(cpu),
-        memory: wireId(memory),
-        disk: wireId(disk),
-        apiLatency: wireId(apiLatency),
-        networkUptime: wireId(networkUptime),
-        connectionStatus,
-      });
-      return unwireMetrics(w) as any;
-    },
     getLatestMetrics: async (appId) => {
       const w = await call<{ appId: string }, WireMetrics | null>(functions, "getLatestMetrics")({ appId });
       return unwireOpt(w === null ? null : unwireMetrics(w)) as any;

@@ -15,7 +15,6 @@ import {
   useLatestMetrics,
   useMetricsHistory,
   useResolveAlert,
-  useSubmitMetrics,
 } from "@/hooks/use-backend";
 import type { AlertView, AppView } from "@/types";
 import { MetricSeverity } from "@/types";
@@ -202,143 +201,6 @@ function Sparkline({
   );
 }
 
-// ── Submit Metrics Modal ────────────────────────────────────────────────────
-type FormState = {
-  cpu: string;
-  memory: string;
-  disk: string;
-  apiLatency: string;
-  networkUptime: string;
-  connectionStatus: string;
-};
-
-const DEFAULT_FORM: FormState = {
-  cpu: "45",
-  memory: "62",
-  disk: "38",
-  apiLatency: "120",
-  networkUptime: "99",
-  connectionStatus: "online",
-};
-
-function SubmitMetricsModal({
-  app,
-  open,
-  onClose,
-}: { app: AppView; open: boolean; onClose: () => void }) {
-  const submit = useSubmitMetrics();
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-
-  function set(key: keyof FormState, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    submit.mutate(
-      {
-        appId: app.id,
-        cpu: BigInt(form.cpu || "0"),
-        memory: BigInt(form.memory || "0"),
-        disk: BigInt(form.disk || "0"),
-        apiLatency: BigInt(form.apiLatency || "0"),
-        networkUptime: BigInt(form.networkUptime || "0"),
-        connectionStatus: form.connectionStatus,
-      },
-      {
-        onSuccess: () => {
-          toast.success(`Metrics submitted for ${app.name}`);
-          onClose();
-        },
-        onError: () => toast.error("Failed to submit metrics"),
-      },
-    );
-  }
-
-  const numFields: Array<{
-    key: keyof FormState;
-    label: string;
-    placeholder: string;
-  }> = [
-    { key: "cpu", label: "CPU %", placeholder: "0-100" },
-    { key: "memory", label: "Memory %", placeholder: "0-100" },
-    { key: "disk", label: "Disk %", placeholder: "0-100" },
-    { key: "apiLatency", label: "API Latency ms", placeholder: "e.g. 120" },
-    { key: "networkUptime", label: "Network Uptime %", placeholder: "0-100" },
-  ];
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="max-w-md"
-        style={{
-          background: "rgba(8,14,35,0.96)",
-          border: "1px solid rgba(91,157,255,0.2)",
-          backdropFilter: "blur(20px)",
-        }}
-        data-ocid="monitoring.submit_metrics.dialog"
-      >
-        <DialogHeader>
-          <DialogTitle className="text-sm font-display font-semibold text-[#E8E8FF]">
-            Submit Test Metrics — {app.name}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3 mt-2">
-          <div className="grid grid-cols-2 gap-3">
-            {numFields.map(({ key, label, placeholder }) => (
-              <div key={key} className="space-y-1">
-                <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.4)] uppercase tracking-wider">
-                  {label}
-                </Label>
-                <Input
-                  type="text"
-                  value={form[key]}
-                  onChange={(e) => set(key, e.target.value)}
-                  placeholder={placeholder}
-                  className="h-8 text-xs font-mono bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.15)] text-[#E8E8FF]"
-                  data-ocid={`monitoring.submit_metrics.${key}.input`}
-                />
-              </div>
-            ))}
-            <div className="space-y-1">
-              <Label className="text-[10px] font-mono text-[rgba(232,232,255,0.4)] uppercase tracking-wider">
-                Connection Status
-              </Label>
-              <Input
-                type="text"
-                value={form.connectionStatus}
-                onChange={(e) => set("connectionStatus", e.target.value)}
-                placeholder="online / degraded / offline"
-                className="h-8 text-xs font-mono bg-[rgba(91,157,255,0.06)] border-[rgba(91,157,255,0.15)] text-[#E8E8FF]"
-                data-ocid="monitoring.submit_metrics.connectionStatus.input"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button
-              type="submit"
-              disabled={submit.isPending}
-              className="flex-1 h-8 text-xs font-mono"
-              data-ocid="monitoring.submit_metrics.submit_button"
-            >
-              {submit.isPending ? "Submitting…" : "Submit Metrics"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="h-8 text-xs font-mono border-[rgba(91,157,255,0.2)] text-[rgba(232,232,255,0.6)]"
-              data-ocid="monitoring.submit_metrics.cancel_button"
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ── Alert Row ──────────────────────────────────────────────────────────────
 function XCircleIcon({
   className,
@@ -443,7 +305,6 @@ function AppMetricCard({ app, index }: { app: AppView; index: number }) {
   const { data: metrics } = useLatestMetrics(app.id);
   const { data: history } = useMetricsHistory(app.id);
   const { data: alertHist } = useAlertHistory(app.id);
-  const [submitOpen, setSubmitOpen] = useState(false);
 
   const cpu = metrics ? Math.min(100, Number(metrics.cpu)) : 0;
   const mem = metrics ? Math.min(100, Number(metrics.memory)) : 0;
@@ -612,33 +473,11 @@ function AppMetricCard({ app, index }: { app: AppView; index: number }) {
         ) : (
           <div className="py-4 text-center">
             <p className="text-xs font-mono text-[rgba(232,232,255,0.3)]">
-              No metrics submitted yet
+              No metrics reported by this app yet
             </p>
           </div>
         )}
-
-        {/* Submit Test Metrics */}
-        <button
-          type="button"
-          onClick={() => setSubmitOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 rounded-lg h-8 text-[10px] font-mono transition-all hover:opacity-80"
-          style={{
-            background: "rgba(91,157,255,0.08)",
-            border: "1px solid rgba(91,157,255,0.18)",
-            color: "rgba(91,157,255,0.8)",
-          }}
-          data-ocid={`monitoring.submit_metrics.open_modal_button.${index}`}
-        >
-          <FlaskConical className="w-3 h-3" />
-          Submit Test Metrics
-        </button>
       </motion.div>
-
-      <SubmitMetricsModal
-        app={app}
-        open={submitOpen}
-        onClose={() => setSubmitOpen(false)}
-      />
     </>
   );
 }

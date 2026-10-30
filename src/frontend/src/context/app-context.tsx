@@ -1,9 +1,12 @@
 import type { AppViewUI } from "@/hooks/use-backend";
 import { createContext, useContext, useState } from "react";
 
+// A browser health probe is a point-in-time observation, so it carries when
+// it was taken; the console stops preferring it over heartbeat-derived
+// status once it is no longer fresh.
 export type ConnectionStatusMap = Record<
   string,
-  "connected" | "disconnected" | "refused"
+  { status: "connected" | "disconnected" | "refused"; at: number }
 >;
 
 interface AppContextValue {
@@ -29,7 +32,10 @@ export function AppRegistryProvider({
     id: string,
     status: "connected" | "disconnected" | "refused",
   ) {
-    setConnectionStatusMap((prev) => ({ ...prev, [id]: status }));
+    setConnectionStatusMap((prev) => ({
+      ...prev,
+      [id]: { status, at: Date.now() },
+    }));
   }
 
   return (
