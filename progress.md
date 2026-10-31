@@ -99,6 +99,17 @@ existing repo config at that existing project and pushing the code live.
 
 ## Change Log (most recent first)
 
+- **2026-10-31 — Render security advisory (Node.js, eMudhra certificates); dependencies cleaned, updates automatic.**
+  Functions now declare Node 22 (was 20, past end of life). `npm audit fix` in `functions/` and
+  `pnpm update` in the workspace (in-range only): the frontend went from 16 findings (2 critical) to 3
+  (one high and two low, all in code paths the browser bundle does not include or in `quill`); the functions
+  still show 8 moderate findings that need a major `firebase-admin` upgrade, which was not applied because it
+  cannot be deployment-tested here. Added `.github/`: weekly Dependabot (patch and minor only, majors never
+  proposed), CI (functions typecheck and build; frontend typecheck, lint and build), and a workflow that
+  merges a Dependabot PR once CI passes. Vercel redeploys the frontend on merge. **Functions are not
+  auto-deployed** (they need Firebase credentials): after dependency changes land, run `firebase deploy
+  --only functions` to ship them.
+
 - **2026-10-30 — Apps declare their own controls; workspaces and clients; real data only.**
   Netra no longer defines commands. Replaced the hardcoded command union with a
   per-app manifest: the app calls `registerCapabilities` (controls, with typed
