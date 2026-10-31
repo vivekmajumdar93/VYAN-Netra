@@ -37,3 +37,6 @@ updates:
       day: saturday
       time: "03:00"
       timezone: Asia/Kolkata
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
